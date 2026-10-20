@@ -55,6 +55,7 @@ def run_notelite_omr(
     output_path: Optional[str] = None,
     sheets: Optional[str] = None,
     timeout_sec: int = 300,
+    pdf_dpi: int = 400,
 ) -> str:
     """
     Runs NoteLite OMR on the input PDF file and outputs MusicXML (.mxl or .musicxml).
@@ -85,7 +86,11 @@ def run_notelite_omr(
         env["TESSDATA_PREFIX"] = tessdata
 
     with tempfile.TemporaryDirectory(prefix="notelite_") as tmp_dir:
-        cmd = [notelite_bin, "-batch", "-export", "-output", tmp_dir]
+        cmd = [
+            notelite_bin, "-batch", "-export", "-output", tmp_dir,
+            # Scans render too small at the default 300 DPI: notes get dropped
+            "-constant", f"com.notelite.omr.image.ImageLoading.pdfResolution={pdf_dpi}",
+        ]
         if sheets:
             cmd.extend(["-sheets", str(sheets)])
         cmd.extend(["--", abs_pdf])

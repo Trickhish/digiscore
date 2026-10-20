@@ -2,17 +2,42 @@
 Rhythmic duration and beam analysis.
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
+
+from digiscore.vector.stems import Beam, Stem, count_beams_on_stem, find_stem_for_note
+
+BLACK_DURATIONS = {
+    0: ("quarter", 1.0),
+    1: ("eighth", 0.5),
+    2: ("16th", 0.25),
+    3: ("32nd", 0.125),
+    4: ("64th", 0.0625),
+}
+
+FLAG_LEVELS = {"8th": 1, "16th": 2, "32nd": 3, "64th": 4}
+
+
+def _flag_levels_on_stem(stem: Stem, flags: List[dict], line_spacing: float) -> int:
+    """Flags are drawn with their origin on the stem's free end."""
+    best = 0
+    for f in flags:
+        if abs(f["x"] - stem.x) > 0.6 * line_spacing:
+            continue
+        if not (stem.y0 - line_spacing <= f["y"] <= stem.y1 + line_spacing):
+            continue
+        for key, lvl in FLAG_LEVELS.items():
+            if key in f["name"]:
+                best = max(best, lvl)
+    return best
 
 
 def resolve_note_durations(
     notes: List[dict],
-    beams: List[dict],
+    stems: List[Stem],
+    beams: List[Beam],
     flags: List[dict],
     dots: List[dict],
-    time_beats: Optional[int] = 4,
-    time_beat_type: Optional[int] = 4,
+    line_spacing: float = 5.0,
 ) -> None:
     """
     Computes note duration (in quarter divisions), note type (quarter, eighth, etc.),
@@ -56,36 +81,34 @@ def resolve_note_durations(
             elif "Half" in glyph_name:
                 n["type"] = "half"
                 n["duration_quarters"] = 2.0
+                stem = find_stem_for_note(n, stems, line_spacing)
+                n["stem"] = stem
+                if stem is not None:
+                    n["stem_dir"] = "up" if (stem.y0 + stem.y1) / 2 < n["y"] else "down"
             else:
-                # Black notehead: determine if 16th, 8th, or quarter
-                nx = n["x"]
-                ny = n["y"]
-
-                # Flags
-                has_flag16 = any(abs(f["x"] - nx) < 16 and abs(f["y"] - ny) < 32 and "16" in f["name"] for f in flags)
-                has_flag8 = any(abs(f["x"] - nx) < 16 and abs(f["y"] - ny) < 32 and "8" in f["name"] for f in flags)
-
-                # Beams covering notehead x
-                matching_beams = [
-                    b for b in beams
-                    if (b["x0"] - 3.0 <= nx <= b["x1"] + 10.0) and abs(b["y0"] - ny) < 40.0
-                ]
-                beam_count = len(matching_beams)
-
-                if has_flag16 or beam_count >= 2:
-                    n["type"] = "16th"
-                    n["duration_quarters"] = 0.25
-                elif has_flag8 or beam_count == 1:
-                    n["type"] = "eighth"
-                    n["duration_quarters"] = 0.5
-                else:
-                    n["type"] = "quarter"
-                    n["duration_quarters"] = 1.0
+                # Black notehead: the number of beams or flags on its own stem gives the value
+                levels = 0
+                stem = find_stem_for_note(n, stems, line_spacing)
+                n["stem"] = stem
+                if stem is not None:
+                    n["stem_dir"] = "up" if (stem.y0 + stem.y1) / 2 < n["y"] else "down"
+                    levels = count_beams_on_stem(stem, beams, line_spacing)
+                    if levels == 0:
+                        levels = _flag_levels_on_stem(stem, flags, line_spacing)
+                n["beam_levels"] = levels
+                n["type"], n["duration_quarters"] = BLACK_DURATIONS[min(levels, 4)]
 
         # Augmentation dots
-        nx = n["x"]
+        # Dots sit just right of the head, on the head's space (or the space above a line note)
+        bbox = n.get("bbox")
+        right = bbox[2] if bbox else n["x"] + line_spacing
         ny = n["y"]
-        dot_count = sum(1 for d in dots if (0 < d["x"] - nx < 16.0) and abs(d["y"] - ny) < 5.0)
+        dot_count = sum(
+            1 for d in dots
+            if 0 < d["x"] - right < 2.2 * line_spacing
+            and -0.8 * line_spacing < ny - d["y"] < 0.8 * line_spacing
+        )
+        dot_count = min(dot_count, 2)
         n["dot_count"] = dot_count
         if dot_count == 1:
             n["duration_quarters"] *= 1.5

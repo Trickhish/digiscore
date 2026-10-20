@@ -3,6 +3,7 @@ Lyrics extraction, verse grouping, and syllable-to-notehead alignment.
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
@@ -18,6 +19,7 @@ class Syllable:
     syllabic: str = "single"  # single, begin, middle, end
     has_hyphen: bool = False
     has_extender: bool = False
+    continues_word: bool = False
 
 
 @dataclass
@@ -25,6 +27,66 @@ class LyricLine:
     verse_number: int
     y: float
     syllables: List[Syllable] = field(default_factory=list)
+
+
+MUSIC_FONT_HINTS = ("leland", "bravura", "emmentaler", "opus", "mscore", "petaluma", "finale", "maestro", "gonville", "sebastian", "musejazz", "feta")
+
+
+def _is_music_char(c: str, font: str) -> bool:
+    if 0xE000 <= ord(c) <= 0xF8FF:
+        return True
+    f = font.lower()
+    return any(h in f for h in MUSIC_FONT_HINTS)
+
+
+def extract_text_tokens(page, gap_ratio: float = 0.04) -> List[Tuple]:
+    """
+    Text tokens (x0, y0, x1, y1, text) built from individual characters.
+    Splits on spaces and on horizontal gaps, because engravers often place separate
+    syllables in a single text run with only a small gap between them.
+    Music-font glyphs are skipped.
+    """
+    tokens: List[Tuple] = []
+    raw = page.get_text("rawdict")
+    for block in raw.get("blocks", []):
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                font = span.get("font", "")
+                size = span.get("size", 10.0) or 10.0
+                gap_limit = gap_ratio * size
+                cur = None
+                for ch in span.get("chars", []):
+                    c = ch["c"]
+                    bx0, by0, bx1, by1 = ch["bbox"]
+                    if c.isspace() or _is_music_char(c, font):
+                        if cur:
+                            tokens.append(tuple(cur))
+                        cur = None
+                        continue
+                    c = unicodedata.normalize("NFKC", c)
+                    if cur and bx0 - cur[2] > gap_limit:
+                        tokens.append(tuple(cur))
+                        cur = None
+                    if cur is None:
+                        cur = [bx0, by0, bx1, by1, c]
+                    else:
+                        cur[2] = max(cur[2], bx1)
+                        cur[1] = min(cur[1], by0)
+                        cur[3] = max(cur[3], by1)
+                        cur[4] += c
+                if cur:
+                    tokens.append(tuple(cur))
+    # Lyric hyphens are often drawn as short horizontal strokes rather than text
+    for d in page.get_drawings():
+        items = d.get("items", [])
+        if len(items) != 1 or items[0][0] != "l" or "s" not in d.get("type", ""):
+            continue
+        p1, p2 = items[0][1], items[0][2]
+        if abs(p1.y - p2.y) < 0.1 and 1.0 <= abs(p1.x - p2.x) <= 6.0 and (d.get("width") or 0) < 1.2:
+            x0, x1 = min(p1.x, p2.x), max(p1.x, p2.x)
+            # Box roughly like a "-" glyph: hyphen sits at x-height middle
+            tokens.append((x0, p1.y - 3.0, x1, p1.y + 4.5, "-"))
+    return tokens
 
 
 def extract_lyrics_for_staff(
@@ -42,13 +104,14 @@ def extract_lyrics_for_staff(
     # Margin below staff: at least 3 pt below bottom line, up to next staff top minus 5 pt
     band_words = []
     max_y = next_staff_top_y - 5.0 if next_staff_top_y > staff_bottom_y else staff_bottom_y + 120.0
-    
+
     for w in page_words:
         x0, y0, x1, y1, text = w[0], w[1], w[2], w[3], w[4].strip()
-        # Skip empty or non-text glyphs (SMuFL private use area)
-        if not text or (len(text) == 1 and ord(text[0]) >= 0xE000):
+        if not text or any(0xE000 <= ord(c) <= 0xF8FF for c in text):
             continue
-        
+        if re.fullmatch(r"\d+", text):
+            continue  # measure numbers, fingering, etc.
+
         # Check if inside vertical lyric band and within horizontal staff extent
         if staff_bottom_y + 3.0 <= y0 <= max_y and (staff_x_min - 20 <= x0 <= staff_x_max + 20):
             band_words.append((x0, y0, x1, y1, text))
@@ -56,24 +119,61 @@ def extract_lyrics_for_staff(
     if not band_words:
         return []
 
-    # Cluster words into horizontal lines by y-coordinate (tolerance ~4 pt)
+    # Cluster real words into lines by baseline; hyphen strokes join the line they sit inside
+    hyphens = [w for w in band_words if w[4] == "-"]
+    texts = sorted((w for w in band_words if w[4] != "-"), key=lambda w: w[3])
     line_clusters: List[List[Tuple]] = []
-    band_words.sort(key=lambda w: w[1])
-
-    for w in band_words:
-        matched = False
-        for cluster in line_clusters:
-            # Check y difference with existing cluster
-            cluster_y = cluster[0][1]
-            if abs(w[1] - cluster_y) < 4.5:
-                cluster.append(w)
-                matched = True
-                break
-        if not matched:
+    for w in texts:
+        if line_clusters and abs(w[3] - line_clusters[-1][-1][3]) < 2.5:
+            line_clusters[-1].append(w)
+        else:
             line_clusters.append([w])
+    for h in hyphens:
+        hy = (h[1] + h[3]) / 2.0
+        for c in line_clusters:
+            top = min(w[1] for w in c)
+            bot = max(w[3] for w in c)
+            if top <= hy <= bot:
+                c.append(h)
+                break
+    if not line_clusters:
+        return []
 
-    # Sort lines from top to bottom (closest to staff is usually verse 1)
-    line_clusters.sort(key=lambda c: sum(w[1] for w in c) / len(c))
+    # A line slightly offset vertically that fills the horizontal gap of the line
+    # above (staggered text of one verse) is merged into it
+    def _xspan(c):
+        return [(w[0], w[2]) for w in c if w[4] != "-"]
+
+    def _overlaps(a, b):
+        return any(x0 < bx1 - 1 and bx0 < x1 - 1 for x0, x1 in _xspan(a) for bx0, bx1 in _xspan(b))
+
+    merged: List[List[Tuple]] = []
+    for c in line_clusters:
+        if merged:
+            prev = merged[-1]
+            h = max(w[3] - w[1] for w in prev)
+            dy = min(w[3] for w in c) - max(w[3] for w in prev)
+            if 0 < dy < 0.9 * h and not _overlaps(prev, c):
+                prev.extend(c)
+                continue
+        merged.append(c)
+    line_clusters = merged
+
+    # Keep only the block of lyric lines directly under the staff: stop at the first
+    # large vertical gap (text blocks of extra stanzas below the music are not lyrics)
+    kept: List[List[Tuple]] = []
+    for c in line_clusters:
+        c_top = min(w[1] for w in c)
+        height = max(w[3] - w[1] for w in c)
+        if not kept:
+            if c_top - staff_bottom_y > max(6.0 * height, 40.0):
+                break
+        else:
+            prev_bottom = max(w[3] for w in kept[-1])
+            if c_top - prev_bottom > 1.2 * height:
+                break
+        kept.append(c)
+    line_clusters = kept
 
     lyric_lines: List[LyricLine] = []
 
@@ -87,6 +187,7 @@ def extract_lyrics_for_staff(
         match = re.match(r"^(\d+)[\./\)]\s*(.*)", start_text)
         
         syllables: List[Syllable] = []
+        pending_continuation = False
         for i, w in enumerate(cluster):
             x0, y0, x1, y1, t = w
             if i == 0 and match:
@@ -95,11 +196,16 @@ def extract_lyrics_for_staff(
                 if not t:
                     continue
             
-            # Hyphen detection: either ends with hyphen or surrounded by hyphens
+            # Hyphen detection: attached to the syllable, or a standalone "-" between syllables.
+            # A hyphen before the first syllable of a line continues a word from the previous system.
             has_trailing_hyphen = t.endswith("-")
             has_leading_hyphen = t.startswith("-")
-            clean_text = t.strip("- \t")
+            clean_text = t.strip("-\u2010\u2011\u2013 \t")
             if not clean_text:
+                if syllables:
+                    syllables[-1].has_hyphen = True
+                else:
+                    pending_continuation = True
                 continue
 
             syllables.append(
@@ -113,6 +219,8 @@ def extract_lyrics_for_staff(
                     has_hyphen=has_trailing_hyphen,
                 )
             )
+            if len(syllables) == 1 and (has_leading_hyphen or pending_continuation):
+                syllables[0].continues_word = True
 
         # Determine syllabic types (single, begin, middle, end) based on hyphens
         # or distance to next syllable
@@ -122,7 +230,7 @@ def extract_lyrics_for_staff(
             prev = syllables[i - 1] if i > 0 else None
             nxt = syllables[i + 1] if i < n_syl - 1 else None
 
-            prev_hyphen = prev.has_hyphen if prev else False
+            prev_hyphen = prev.has_hyphen if prev else curr.continues_word
             curr_hyphen = curr.has_hyphen
 
             if prev_hyphen and curr_hyphen:
@@ -160,26 +268,37 @@ def match_syllables_to_notes(
     for note in notes:
         note.setdefault("lyrics", [])
 
+    # Chords share one lyric: only the first head at a given x can take it
+    sung = []
+    for note in sorted((n for n in notes if not n.get("is_rest")), key=lambda n: n.get("x", 0.0)):
+        if sung and abs(note.get("x", 0.0) - sung[-1].get("x", 0.0)) < 1.0:
+            continue
+        sung.append(note)
+
+    def head_center(n):
+        b = n.get("bbox")
+        return (b[0] + b[2]) / 2.0 if b else n.get("x", 0.0)
+
     for line in lyric_lines:
         v_num = line.verse_number
+        taken = set()
         for syl in line.syllables:
+            # Syllables are centred under their note (or left-aligned for melismas)
             syl_center = (syl.x0 + syl.x1) / 2.0
-            
-            # Find the best note whose horizontal position aligns with this syllable
-            best_note = None
-            best_dist = float("inf")
-            for note in notes:
-                # Note x coordinate
-                nx = note.get("x", 0.0)
-                dist = abs(nx - syl_center)
+            best_note, best_dist = None, float("inf")
+            for idx, note in enumerate(sung):
+                if idx in taken:
+                    continue
+                hc = head_center(note)
+                dist = min(abs(hc - syl_center), abs(note.get("x", 0.0) - syl.x0))
                 if dist < best_dist and dist <= tolerance:
-                    best_dist = dist
-                    best_note = note
-            
-            if best_note is not None:
-                best_note["lyrics"].append({
-                    "verse": v_num,
-                    "text": syl.text,
-                    "syllabic": syl.syllabic,
-                    "has_extender": syl.has_extender,
-                })
+                    best_dist, best_note = dist, idx
+            if best_note is None:
+                continue
+            taken.add(best_note)
+            sung[best_note]["lyrics"].append({
+                "verse": v_num,
+                "text": syl.text,
+                "syllabic": syl.syllabic,
+                "has_extender": syl.has_extender,
+            })

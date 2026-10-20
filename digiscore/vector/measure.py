@@ -29,16 +29,32 @@ class Measure:
     is_pickup: bool = False
 
 
+def _is_note_stem(x: float, y0: float, y1: float, noteheads: List[dict], sp: float) -> bool:
+    """A vertical line with a notehead touching one of its ends is a stem, not a barline."""
+    for h in noteheads:
+        bbox = h.get("bbox")
+        if not bbox:
+            continue
+        if min(abs(x - bbox[0]), abs(x - bbox[2])) > max(0.9, 0.2 * sp):
+            continue
+        if abs(h["y"] - y0) < 0.8 * sp or abs(h["y"] - y1) < 0.8 * sp:
+            return True
+    return False
+
+
 def extract_barlines_for_staff(
     drawings: List[dict],
     staff: Staff,
     repeat_dots: Optional[List[dict]] = None,
+    noteheads: Optional[List[dict]] = None,
 ) -> List[Barline]:
     """
     Extracts all vertical barlines spanning this staff.
     """
     s_top = staff.top_y
     s_bot = staff.bottom_y
+    sp = staff.line_spacing
+    noteheads = noteheads or []
     candidates = []
 
     for d in drawings:
@@ -64,6 +80,8 @@ def extract_barlines_for_staff(
         x, y0, y1 = c
         # Only keep barlines within the staff's horizontal span
         if not (staff.x_min - 5 <= x <= staff.x_max + 5):
+            continue
+        if _is_note_stem(x, y0, y1, noteheads, sp):
             continue
         if not barlines or abs(x - barlines[-1].x) > 2.0:
             barlines.append(Barline(x=x, y0=y0, y1=y1))

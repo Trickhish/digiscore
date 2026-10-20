@@ -57,32 +57,36 @@ def detect_staves_on_page(page, page_idx: int) -> List[Staff]:
                 p1, p2 = item[1], item[2]
                 if abs(p1.y - p2.y) < 0.2:
                     x0, x1 = min(p1.x, p2.x), max(p1.x, p2.x)
-                    if x1 - x0 > 40:
+                    if x1 - x0 > 4:
                         h_segments.append((x0, x1, round(p1.y, 2)))
             elif item[0] == "re":
                 r = item[1]
-                if r.height < 2.0 and r.width > 40:
+                if r.height < 2.0 and r.width > 4:
                     h_segments.append((r.x0, r.x1, round((r.y0 + r.y1) / 2, 2)))
 
-    # Cluster segments by y coordinate (within 0.5 pt)
+    # Cluster segments by y coordinate (within 0.5 pt of the previous one)
     y_lines = defaultdict(list)
-    for x0, x1, y in h_segments:
-        matched = False
-        for y_key in list(y_lines.keys()):
-            if abs(y - y_key) < 0.5:
-                y_lines[y_key].append((x0, x1))
-                matched = True
-                break
-        if not matched:
-            y_lines[y].append((x0, x1))
+    cur_key, prev_y = None, None
+    for x0, x1, y in sorted(h_segments, key=lambda s: s[2]):
+        if prev_y is None or y - prev_y >= 0.5:
+            cur_key = y
+        y_lines[cur_key].append((x0, x1))
+        prev_y = y
 
-    # Merge overlapping/adjacent segments for each line
+    # Merge touching segments for each line; a staff line is one long continuous run
+    # (ledger lines and tie/slur fragments at the same y are short and scattered)
     merged_lines = []
     for y, segs in y_lines.items():
-        min_x = min(s[0] for s in segs)
-        max_x = max(s[1] for s in segs)
-        if max_x - min_x > 120:  # Must span at least 120 pt to be a staff line
-            merged_lines.append(StaffLine(x0=min_x, x1=max_x, y=y))
+        segs.sort()
+        runs = []
+        for x0, x1 in segs:
+            if runs and x0 <= runs[-1][1] + 1.0:
+                runs[-1][1] = max(runs[-1][1], x1)
+            else:
+                runs.append([x0, x1])
+        best = max(runs, key=lambda r: r[1] - r[0])
+        if best[1] - best[0] > 120:
+            merged_lines.append(StaffLine(x0=best[0], x1=best[1], y=y))
 
     merged_lines.sort(key=lambda l: l.y)
 

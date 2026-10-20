@@ -15,6 +15,10 @@ from lxml import etree
 
 DEFAULT_API_BASE = "https://ai.dury.dev/v1"
 DEFAULT_MODEL = "antigravity/gemini-3-flash"
+MUSICXML_DOCTYPE = (
+    '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" '
+    '"http://www.musicxml.org/dtds/partwise.dtd">'
+)
 
 
 def get_api_key() -> Optional[str]:
@@ -151,6 +155,17 @@ class VisionClient:
             return lyrics_text
 
 
+def _new_creator(ident, kind: str):
+    """Creators must come first in <identification>, before rights/encoding/source."""
+    elem = etree.Element("creator", type=kind)
+    existing = ident.findall("creator")
+    if existing:
+        existing[-1].addnext(elem)
+    else:
+        ident.insert(0, elem)
+    return elem
+
+
 def enrich_musicxml_with_metadata(xml_content: str, metadata: Dict[str, Any]) -> str:
     """
     Injects or updates metadata into an existing MusicXML string.
@@ -182,30 +197,36 @@ def enrich_musicxml_with_metadata(xml_content: str, metadata: Dict[str, Any]) ->
         # Identification & Creators
         ident = root.find("identification")
         if ident is None:
-            # Insert after work or at start
-            idx = 1 if root.find("work") is not None else 0
+            # Goes after <work>, <movement-number> and <movement-title>
             ident = etree.Element("identification")
-            root.insert(idx, ident)
+            anchor = None
+            for tag in ("work", "movement-number", "movement-title"):
+                if root.find(tag) is not None:
+                    anchor = root.find(tag)
+            if anchor is not None:
+                anchor.addnext(ident)
+            else:
+                root.insert(0, ident)
 
         composer = metadata.get("composer")
         if composer:
             comp_elem = ident.find('creator[@type="composer"]')
             if comp_elem is None:
-                comp_elem = etree.SubElement(ident, "creator", type="composer")
+                comp_elem = _new_creator(ident, "composer")
             comp_elem.text = composer
 
         lyricist = metadata.get("lyricist")
         if lyricist:
             lyr_elem = ident.find('creator[@type="lyricist"]')
             if lyr_elem is None:
-                lyr_elem = etree.SubElement(ident, "creator", type="lyricist")
+                lyr_elem = _new_creator(ident, "lyricist")
             lyr_elem.text = lyricist
 
         arranger = metadata.get("arranger")
         if arranger:
             arr_elem = ident.find('creator[@type="arranger"]')
             if arr_elem is None:
-                arr_elem = etree.SubElement(ident, "creator", type="arranger")
+                arr_elem = _new_creator(ident, "arranger")
             arr_elem.text = arranger
 
         # Parts naming if parts are generic (e.g. Part 1, Voice, or dummyPart)
@@ -214,6 +235,9 @@ def enrich_musicxml_with_metadata(xml_content: str, metadata: Dict[str, Any]) ->
             part_list = root.find("part-list")
             if part_list is not None:
                 score_parts = part_list.findall("score-part")
+                # Names only map one-to-one when the counts agree (two voices may share a staff)
+                if len(meta_parts) != len(score_parts):
+                    score_parts = []
                 for idx, sp in enumerate(score_parts):
                     if idx < len(meta_parts):
                         pn = sp.find("part-name")
@@ -224,10 +248,11 @@ def enrich_musicxml_with_metadata(xml_content: str, metadata: Dict[str, Any]) ->
                             pn.text = meta_parts[idx]
 
         return etree.tostring(
-            root,
+            root.getroottree(),
             pretty_print=True,
             xml_declaration=True,
             encoding="UTF-8",
+            doctype=MUSICXML_DOCTYPE,
         ).decode("utf-8")
     except Exception:
         return xml_content

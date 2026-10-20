@@ -99,11 +99,11 @@ def calculate_pitch_from_y(
             acc_type = "natural"
             
         if measure_accidental_state is not None:
-            measure_accidental_state[step_name] = alter
+            measure_accidental_state[(step_name, octave)] = alter
     else:
         # Check measure accidentals state first, then key signature
-        if measure_accidental_state is not None and step_name in measure_accidental_state:
-            alter = measure_accidental_state[step_name]
+        if measure_accidental_state is not None and (step_name, octave) in measure_accidental_state:
+            alter = measure_accidental_state[(step_name, octave)]
         else:
             key_alters = get_key_signature_alterations(key_fifths)
             alter = key_alters.get(step_name, 0)

@@ -8,10 +8,57 @@ import pymupdf
 
 from digiscore.smufl import get_glyph_name, is_clef, is_notehead, is_rest
 from digiscore.vector.duration import resolve_note_durations
-from digiscore.vector.lyrics import extract_lyrics_for_staff, match_syllables_to_notes
+from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_tokens, match_syllables_to_notes
 from digiscore.vector.measure import create_measures_for_staff, extract_barlines_for_staff
 from digiscore.vector.pitch import calculate_pitch_from_y
 from digiscore.vector.staff import Staff, System, detect_staves_on_page, group_staves_into_systems
+from digiscore.vector.stems import extract_stems_and_beams
+from digiscore.vector.voices import assign_voices
+
+
+def nearest_staff(glyph: dict, staves: List[Staff]) -> Optional[Staff]:
+    """The staff whose vertical span is closest to the glyph (each symbol belongs to one staff)."""
+    best, best_d = None, None
+    for s in staves:
+        if not (s.x_min - 5 <= glyph["x"] <= s.x_max + 5):
+            continue
+        y = glyph["y"]
+        d = 0.0 if s.top_y <= y <= s.bottom_y else min(abs(y - s.top_y), abs(y - s.bottom_y))
+        if best is None or d < best_d:
+            best, best_d = s, d
+    return best
+
+
+def _note_out(n: dict, voice: int) -> dict:
+    """Copy of a note for the writer, without geometry objects."""
+    out = {k: v for k, v in n.items() if k not in ("stem", "bbox")}
+    out["voice"] = voice
+    return out
+
+
+def find_time_signature_changes(glyphs: List[dict], staff: Staff, after_x: float) -> List[Tuple[float, int, int]]:
+    """Stacked time-signature digit pairs on the staff, right of the staff header."""
+    sp = staff.line_spacing
+    mid = (staff.top_y + staff.bottom_y) / 2
+    digits = [
+        g for g in glyphs
+        if g["name"].startswith("timeSig") and g["name"][7:].isdigit()
+        and g["x"] >= after_x - 1
+        and staff.top_y - sp <= g["y"] <= staff.bottom_y + sp
+    ]
+    changes = []
+    used = set()
+    for i, top in enumerate(digits):
+        if i in used or top["y"] > mid + 0.5:
+            continue
+        for j, bot in enumerate(digits):
+            if j in used or j == i or bot["y"] <= mid + 0.5:
+                continue
+            if abs(bot["x"] - top["x"]) < 1.5 * sp:
+                used.update({i, j})
+                changes.append((min(top["x"], bot["x"]), int(top["name"][7:]), int(bot["name"][7:])))
+                break
+    return sorted(changes)
 
 
 def parse_vector_score(doc: pymupdf.Document) -> dict:
@@ -30,7 +77,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         all_systems.extend(systems)
 
         raw = page.get_text("rawdict")
-        words = page.get_text("words")
+        words = extract_text_tokens(page)
 
         # Extract SMuFL / Opus glyphs
         glyphs = []
@@ -51,17 +98,10 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                                     "bbox": ch["bbox"],
                                 })
 
-        # Extract beams: drawings with height between 1.5 and 8 pt and width between 8 and 160 pt
-        beams = []
-        for d in drawings:
-            r = d["rect"]
-            if 8.0 < r.width < 160.0 and 1.5 <= r.height <= 8.5:
-                beams.append({
-                    "x0": r.x0,
-                    "x1": r.x1,
-                    "y0": r.y0,
-                    "y1": r.y1,
-                })
+        page_spacing = (
+            sorted(s.line_spacing for s in staves)[len(staves) // 2] if staves else 5.0
+        )
+        stems, beams = extract_stems_and_beams(drawings, page_spacing)
 
         page_data.append({
             "page_idx": page_idx,
@@ -69,6 +109,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
             "systems": systems,
             "glyphs": glyphs,
             "beams": beams,
+            "stems": stems,
             "words": words,
             "drawings": drawings,
         })
@@ -99,6 +140,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         p_idx = p_info["page_idx"]
         glyphs = p_info["glyphs"]
         beams = p_info["beams"]
+        stems = p_info["stems"]
         words = p_info["words"]
         drawings = p_info["drawings"]
 
@@ -110,6 +152,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         flags = [g for g in glyphs if "flag" in g["name"].lower()]
         dots = [g for g in glyphs if "dot" in g["name"].lower() and "repeat" not in g["name"].lower()]
         repeat_dots = [g for g in glyphs if "repeatdot" in g["name"].lower()]
+
+        page_staves = p_info["staves"]
 
         for sys in p_info["systems"]:
             for s_idx, staff in enumerate(sys.staves):
@@ -137,6 +181,14 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         staff.clef_sign = "G"
                         staff.clef_line = 2
                         staff.clef_octave = 0
+                        # Separate small "8" drawn under the clef (Sibelius tenor clef)
+                        if any(
+                            g["name"] == "clef8"
+                            and abs(g["x"] - clef_x) < 4 * staff.line_spacing
+                            and staff.bottom_y < g["y"] < staff.bottom_y + 5 * staff.line_spacing
+                            for g in glyphs
+                        ):
+                            staff.clef_octave = -1
 
                 # Detect key signature and time signature in staff header
                 h_glyphs = [
@@ -150,12 +202,24 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 ]
                 first_header_note_x = min(h_note_xs) if h_note_xs else staff.x_min + 120
 
-                # Key signature sharps/flats
+                # Key signature sharps/flats (an accidental right before a notehead at the
+                # same height is that note's accidental, not part of the key signature)
+                sp_h = staff.line_spacing
+                h_heads = [g for g in h_glyphs if "notehead" in g["name"]]
+
+                def _attached_to_head(a):
+                    return any(
+                        0 < h["x"] - a["x"] < 2.5 * sp_h and abs(h["y"] - a["y"]) < 0.4 * sp_h
+                        for h in h_heads
+                    )
+
                 key_accs = [
                     g for g in h_glyphs
                     if clef_x < g["x"] < first_header_note_x
                     and ("Sharp" in g["name"] or "Flat" in g["name"])
+                    and not _attached_to_head(g)
                 ]
+                key_end_x = max((g["x"] for g in key_accs), default=clef_x)
                 if key_accs:
                     sharps = sum(1 for g in key_accs if "Sharp" in g["name"])
                     flats = sum(1 for g in key_accs if "Flat" in g["name"])
@@ -196,6 +260,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 staff_notes_raw = []
 
                 for nh in noteheads:
+                    if nearest_staff(nh, page_staves) is not staff:
+                        continue
                     if staff.top_y - 25 <= nh["y"] <= staff.bottom_y + 25 and staff.x_min - 5 <= nh["x"] <= staff.x_max + 5:
                         staff_notes_raw.append({
                             "is_rest": False,
@@ -206,6 +272,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         })
 
                 for r in rests:
+                    if nearest_staff(r, page_staves) is not staff:
+                        continue
                     if staff.top_y - 15 <= r["y"] <= staff.bottom_y + 15 and staff.x_min - 5 <= r["x"] <= staff.x_max + 5:
                         staff_notes_raw.append({
                             "is_rest": True,
@@ -218,43 +286,19 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 # Sort by x
                 staff_notes_raw.sort(key=lambda n: n["x"])
 
-                # Attach accidentals and compute pitch
-                for n in staff_notes_raw:
-                    if not n["is_rest"]:
-                        # Look for explicit accidental to the left of the notehead
-                        nearby_acc = [
-                            a for a in accidentals
-                            if 0 < n["x"] - a["x"] < 16.0 and abs(n["y"] - a["y"]) < 6.0
-                        ]
-                        exp_acc = nearby_acc[0]["name"] if nearby_acc else None
-                        
-                        pitch = calculate_pitch_from_y(
-                            orig_y=n["y"],
-                            staff_bottom_y=staff.bottom_y,
-                            line_spacing=staff.line_spacing,
-                            clef_sign=staff.clef_sign,
-                            clef_line=staff.clef_line,
-                            clef_octave=staff.clef_octave,
-                            explicit_accidental=exp_acc,
-                            key_fifths=staff.key_fifths,
-                        )
-                        n["step"] = pitch.step
-                        n["octave"] = pitch.octave
-                        n["alter"] = pitch.alter
-                        n["accidental"] = pitch.accidental
-
                 # Resolve durations
                 resolve_note_durations(
                     notes=staff_notes_raw,
+                    stems=stems,
                     beams=beams,
                     flags=flags,
                     dots=dots,
-                    time_beats=staff.time_beats or score_time_beats,
-                    time_beat_type=staff.time_beat_type or score_time_beat_type,
+                    line_spacing=staff.line_spacing,
                 )
 
                 # Next staff top y for lyrics band
-                next_top = sys.staves[s_idx + 1].top_y if s_idx + 1 < len(sys.staves) else staff.bottom_y + 90.0
+                below = [s.top_y for s in page_staves if s.top_y > staff.bottom_y + 1]
+                next_top = min(below) if below else staff.bottom_y + 90.0
                 
                 # Extract lyrics
                 lyric_lines = extract_lyrics_for_staff(
@@ -267,25 +311,78 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 match_syllables_to_notes(staff_notes_raw, lyric_lines)
 
                 # Extract barlines and create measures
-                barlines = extract_barlines_for_staff(drawings, staff, repeat_dots=repeat_dots)
+                barlines = extract_barlines_for_staff(
+                    drawings, staff, repeat_dots=repeat_dots,
+                    noteheads=[n for n in staff_notes_raw if not n["is_rest"]],
+                )
                 measures = create_measures_for_staff(staff, barlines, staff_notes_raw)
 
+                # Pitch: key signature, then explicit accidentals that persist to the barline
+                header_end = key_end_x + 0.5
+                sp = staff.line_spacing
+                for m in measures:
+                    acc_state: Dict = {}
+                    for n in m.notes:
+                        if n["is_rest"]:
+                            continue
+                        hx0 = n["bbox"][0] if n.get("bbox") else n["x"]
+                        nearby_acc = [
+                            a for a in accidentals
+                            if a["x"] > header_end
+                            and 0 < hx0 - a["x"] < 3.2 * sp
+                            and abs(n["y"] - a["y"]) < 0.4 * sp
+                        ]
+                        nearby_acc.sort(key=lambda a: hx0 - a["x"])
+                        exp_acc = nearby_acc[0]["name"] if nearby_acc else None
+                        pitch = calculate_pitch_from_y(
+                            orig_y=n["y"],
+                            staff_bottom_y=staff.bottom_y,
+                            line_spacing=sp,
+                            clef_sign=staff.clef_sign,
+                            clef_line=staff.clef_line,
+                            clef_octave=staff.clef_octave,
+                            explicit_accidental=exp_acc,
+                            key_fifths=staff.key_fifths,
+                            measure_accidental_state=acc_state,
+                        )
+                        n["step"] = pitch.step
+                        n["octave"] = pitch.octave
+                        n["alter"] = pitch.alter
+                        n["accidental"] = pitch.accidental
+
+                # Time signature changes inside the staff (stacked digit pairs after the header)
+                ts_changes = find_time_signature_changes(glyphs, staff, first_header_note_x)
+
                 # Renumber measures consecutively
+                cur_beats = staff.time_beats or score_time_beats
+                cur_beat_type = staff.time_beat_type or score_time_beat_type
                 for m in measures:
                     m.measure_number = part_measure_counters[p_idx_for_staff]
                     part_measure_counters[p_idx_for_staff] += 1
+                    for tx, b, bt in ts_changes:
+                        # A time signature sits right after the barline that opens its bar
+                        if m.x0 - 2 <= tx < m.x0 + 4 * staff.line_spacing:
+                            cur_beats, cur_beat_type = b, bt
+                            score_time_beats, score_time_beat_type = b, bt
 
                     # Prepare dict for writer
                     m_dict = {
                         "number": m.measure_number,
                         "key_fifths": staff.key_fifths,
-                        "time_beats": staff.time_beats or score_time_beats,
-                        "time_beat_type": staff.time_beat_type or score_time_beat_type,
+                        "time_beats": cur_beats,
+                        "time_beat_type": cur_beat_type,
                         "clef_sign": staff.clef_sign,
                         "clef_line": staff.clef_line,
                         "clef_octave": staff.clef_octave,
                         "notes": m.notes,
                     }
+                    voices = assign_voices(
+                        m.notes, staff.line_spacing, (staff.top_y + staff.bottom_y) / 2
+                    )
+                    m_dict["voices"] = [
+                        [[_note_out(n, v_idx + 1) for n in ev] for ev in events]
+                        for v_idx, events in enumerate(voices)
+                    ]
                     if m.end_barline and m.end_barline.repeat_direction:
                         m_dict["end_barline"] = {"repeat_direction": m.end_barline.repeat_direction}
 
