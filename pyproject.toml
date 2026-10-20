@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "digiscore"
+version = "0.1.0"
+description = "Digitize singing score PDFs into compliant MusicXML 4.0 files"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pymupdf>=1.24.0",
+    "lxml>=5.0.0",
+    "requests>=2.31.0",
+    "music21>=9.1.0",
+    "pillow>=10.0.0",
+]
+
+[project.scripts]
+digiscore = "digiscore.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["digiscore*"]

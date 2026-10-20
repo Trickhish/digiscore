@@ -1,6 +1,12 @@
-.env
 __pycache__/
-*.pyc
-.venv/
-out/
+*.py[cod]
+*$py.class
 *.egg-info/
+dist/
+build/
+.pytest_cache/
+.venv/
+.env
+out/
+tmp/
+*.omr
