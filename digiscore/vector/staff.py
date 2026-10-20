@@ -33,6 +33,7 @@ class Staff:
     key_fifths: int = 0     # e.g. -3 for Eb major
     time_beats: Optional[int] = None
     time_beat_type: Optional[int] = None
+    time_symbol: Optional[str] = None
 
 
 @dataclass
@@ -85,10 +86,24 @@ def detect_staves_on_page(page, page_idx: int) -> List[Staff]:
             else:
                 runs.append([x0, x1])
         best = max(runs, key=lambda r: r[1] - r[0])
-        if best[1] - best[0] > 120:
+        if best[1] - best[0] > 50:
             merged_lines.append(StaffLine(x0=best[0], x1=best[1], y=y))
 
     merged_lines.sort(key=lambda l: l.y)
+    staves = _find_staves([l for l in merged_lines if l.x1 - l.x0 > 120], page_idx)
+    # Short staves (a one-bar last system): five short lines that start and end
+    # together, away from the staves already found
+    taken = [(st.top_y - st.line_spacing, st.bottom_y + st.line_spacing) for st in staves]
+    rest = [l for l in merged_lines if l.x1 - l.x0 <= 120 and not any(a <= l.y <= b for a, b in taken)]
+    for st in _find_staves(rest, page_idx, aligned=True):
+        staves.append(st)
+    staves.sort(key=lambda st: st.top_y)
+    for i, st in enumerate(staves):
+        st.staff_idx = i
+    return staves
+
+
+def _find_staves(merged_lines: List["StaffLine"], page_idx: int, aligned: bool = False) -> List[Staff]:
 
     staves: List[Staff] = []
     i = 0
@@ -99,7 +114,9 @@ def detect_staves_on_page(page, page_idx: int) -> List[Staff]:
             spacings = [cand[k + 1].y - cand[k].y for k in range(4)]
             avg_sp = sum(spacings) / 4
             # A valid staff has 5 lines with uniform spacing between 3 and 18 pt
-            if 3.0 <= avg_sp <= 18.0 and all(abs(sp - avg_sp) < 1.0 for sp in spacings):
+            ok_x = not aligned or (max(c.x0 for c in cand) - min(c.x0 for c in cand) < 1.0
+                                   and max(c.x1 for c in cand) - min(c.x1 for c in cand) < 1.0)
+            if 3.0 <= avg_sp <= 18.0 and all(abs(sp - avg_sp) < 1.0 for sp in spacings) and ok_x:
                 staff = Staff(
                     page_idx=page_idx,
                     staff_idx=staff_idx,

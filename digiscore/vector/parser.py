@@ -6,6 +6,7 @@ Extracts staves, systems, clefs, notes, measures, and lyrics from vector PDF pag
 from typing import Dict, List, Optional, Tuple
 import pymupdf
 
+from digiscore.vector.ties import find_arcs, mark_ties
 from digiscore.smufl import get_glyph_name, is_clef, is_notehead, is_rest
 from digiscore.vector.duration import resolve_note_durations
 from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_tokens, match_syllables_to_notes
@@ -36,29 +37,119 @@ def _note_out(n: dict, voice: int) -> dict:
     return out
 
 
-def find_time_signature_changes(glyphs: List[dict], staff: Staff, after_x: float) -> List[Tuple[float, int, int]]:
-    """Stacked time-signature digit pairs on the staff, right of the staff header."""
+_TIME_SYMBOLS = {"timeSigCommon": (4, 4, "common"), "timeSigCutCommon": (2, 2, "cut")}
+
+
+def read_time_signatures(glyphs: List[dict], staff: Staff, x_lo: float, x_hi: float = float("inf")
+                         ) -> List[Tuple[float, int, int, Optional[str]]]:
+    """
+    Time signatures on a staff between x_lo and x_hi: (x, beats, beat_type, symbol).
+    A signature is a common/cut symbol, or a row of digits above the middle line
+    over a row below it (each row may hold several digits, e.g. 12 over 8).
+    """
     sp = staff.line_spacing
     mid = (staff.top_y + staff.bottom_y) / 2
-    digits = [
+    found = [
         g for g in glyphs
-        if g["name"].startswith("timeSig") and g["name"][7:].isdigit()
-        and g["x"] >= after_x - 1
+        if g["name"].startswith("timeSig") and x_lo - 1 <= g["x"] < x_hi
         and staff.top_y - sp <= g["y"] <= staff.bottom_y + sp
     ]
-    changes = []
-    used = set()
-    for i, top in enumerate(digits):
-        if i in used or top["y"] > mid + 0.5:
+    out = []
+    for g in found:
+        if g["name"] in _TIME_SYMBOLS:
+            out.append((g["x"], *_TIME_SYMBOLS[g["name"]]))
+    digits = sorted((g for g in found if g["name"][7:].isdigit()), key=lambda g: g["x"])
+    # Cluster digits that overlap horizontally into one signature
+    clusters: List[List[dict]] = []
+    for g in digits:
+        if clusters and g["x"] - max(d["x"] for d in clusters[-1]) < 1.5 * sp:
+            clusters[-1].append(g)
+        else:
+            clusters.append([g])
+    for cl in clusters:
+        top = sorted((g for g in cl if g["y"] <= mid + 0.5), key=lambda g: g["x"])
+        bot = sorted((g for g in cl if g["y"] > mid + 0.5), key=lambda g: g["x"])
+        if not top or not bot:
             continue
-        for j, bot in enumerate(digits):
-            if j in used or j == i or bot["y"] <= mid + 0.5:
-                continue
-            if abs(bot["x"] - top["x"]) < 1.5 * sp:
-                used.update({i, j})
-                changes.append((min(top["x"], bot["x"]), int(top["name"][7:]), int(bot["name"][7:])))
-                break
-    return sorted(changes)
+        beats = int("".join(g["name"][7:] for g in top))
+        beat_type = int("".join(g["name"][7:] for g in bot))
+        if beats > 0 and beat_type in (1, 2, 4, 8, 16, 32):
+            out.append((min(g["x"] for g in cl), beats, beat_type, None))
+    return sorted(out)
+
+
+def find_key_changes(accidentals, staff: Staff, measures, heads, header_end: float) -> Dict[int, Tuple[int, float]]:
+    """
+    Key signatures at the start of a bar inside the staff: a run of accidentals
+    right after the opening barline, none of which belongs to a notehead
+    (naturals cancel the old key). Returns {id(measure): (fifths, end x)}.
+    """
+    sp = staff.line_spacing
+    out = {}
+    for m in measures:
+        if m.x0 <= header_end + sp:
+            continue
+        first_head = min((h["x"] for h in heads if m.x0 < h["x"] < m.x1), default=m.x1)
+        run = sorted(
+            (a for a in accidentals
+             if m.x0 - 0.5 * sp < a["x"] < first_head
+             and staff.top_y - 2 * sp <= a["y"] <= staff.bottom_y + 2 * sp),
+            key=lambda a: a["x"],
+        )
+        if not run:
+            continue
+        # A note's own accidental sits right against its notehead, at its height
+        def _own(a):
+            return any(abs(h["y"] - a["y"]) < 0.4 * sp and -0.2 * sp < h["bbox"][0] - a["bbox"][2] < 1.0 * sp
+                       for h in heads if m.x0 < h["x"] < m.x1)
+        if _own(run[-1]):
+            run = run[:-1]
+        signed = [a for a in run if "Sharp" in a["name"] or "Flat" in a["name"]]
+        naturals = [a for a in run if "Natural" in a["name"]]
+        if not signed and len(naturals) < 2:
+            continue
+        sharps = sum("Sharp" in a["name"] for a in signed)
+        flats = sum("Flat" in a["name"] for a in signed)
+        if sharps and flats:
+            continue
+        out[id(m)] = (sharps - flats, run[-1]["x"] + 0.5)
+    return out
+
+
+def find_time_signature_changes(glyphs: List[dict], staff: Staff, after_x: float):
+    """Time signatures on the staff right of the staff header."""
+    return read_time_signatures(glyphs, staff, after_x)
+
+
+def _pair_ties(parts: List[dict]) -> None:
+    """Keep a tie only when its start and stop are consecutive notes of one voice at the same pitch."""
+    def key(n):
+        return (n.get("step"), n.get("octave"), n.get("alter", 0))
+
+    for p in parts:
+        seqs: Dict[int, List[dict]] = {}
+        for m in p["measures"]:
+            for v_idx, v in enumerate(m.get("voices", [])):
+                for ev in v:
+                    if ev:
+                        seqs.setdefault(v_idx, []).append(ev)
+        for seq in seqs.values():
+            ok = set()
+            for i in range(len(seq) - 1):
+                for a in seq[i]:
+                    for b in seq[i + 1]:
+                        # An accidental carries through a tie into the next bar
+                        if (a.get("tie_start") and b.get("tie_stop") and not a.get("is_rest")
+                                and (a.get("step"), a.get("octave")) == (b.get("step"), b.get("octave"))
+                                and a.get("alter", 0) != b.get("alter", 0) and not b.get("accidental")):
+                            b["alter"] = a.get("alter", 0)
+                        if a.get("tie_start") and b.get("tie_stop") and not a.get("is_rest") and key(a) == key(b):
+                            ok.update({(id(a), "tie_start"), (id(b), "tie_stop")})
+            for ev in seq:
+                for n in ev:
+                    for flag in ("tie_start", "tie_stop"):
+                        if n.get(flag) and (id(n), flag) not in ok:
+                            n.pop(flag)
 
 
 def parse_vector_score(doc: pymupdf.Document) -> dict:
@@ -131,6 +222,9 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     score_key_fifths = 0
     score_time_beats = 4
     score_time_beat_type = 4
+    score_time_symbol = None
+    score_time_seen = None
+    part_time: Dict[int, tuple] = {}
     score_tempo = None
 
     # Track measure numbers across systems for each part
@@ -143,6 +237,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         stems = p_info["stems"]
         words = p_info["words"]
         drawings = p_info["drawings"]
+        tie_arcs = find_arcs(drawings)
 
         # Separate glyph types
         noteheads = [g for g in glyphs if is_notehead(g["name"])]
@@ -230,30 +325,18 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                     staff.key_fifths = score_key_fifths
 
                 # Time signature
-                ts_glyphs = [
-                    g for g in h_glyphs
-                    if clef_x < g["x"] < first_header_note_x
-                    and "timeSig" in g["name"]
-                ]
-                if ts_glyphs:
-                    ts_glyphs.sort(key=lambda g: g["y"])
-                    if len(ts_glyphs) >= 2:
-                        try:
-                            b_str = ts_glyphs[0]["name"].replace("timeSig", "")
-                            bt_str = ts_glyphs[1]["name"].replace("timeSig", "")
-                            staff.time_beats = int(b_str)
-                            staff.time_beat_type = int(bt_str)
-                            score_time_beats = staff.time_beats
-                            score_time_beat_type = staff.time_beat_type
-                        except Exception:
-                            pass
-                    elif len(ts_glyphs) == 1:
-                        if "Common" in ts_glyphs[0]["name"]:
-                            staff.time_beats = 4
-                            staff.time_beat_type = 4
+                header_ts = read_time_signatures(h_glyphs, staff, clef_x + 1, first_header_note_x)
+                if header_ts:
+                    _, staff.time_beats, staff.time_beat_type, staff.time_symbol = header_ts[0]
+                    if score_time_seen is None:
+                        score_time_beats, score_time_beat_type = staff.time_beats, staff.time_beat_type
+                        score_time_symbol = staff.time_symbol
+                        score_time_seen = True
                 else:
-                    staff.time_beats = score_time_beats
-                    staff.time_beat_type = score_time_beat_type
+                    # The time in force on this part (a change earlier on another staff of the
+                    # same system must not leak into this one)
+                    staff.time_beats, staff.time_beat_type, staff.time_symbol = part_time.get(
+                        p_idx_for_staff, (score_time_beats, score_time_beat_type, score_time_symbol))
 
                 # Notes and rests belonging to this staff vertically
                 # Between staff.top_y - 30 and staff.bottom_y + 30
@@ -320,7 +403,14 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 # Pitch: key signature, then explicit accidentals that persist to the barline
                 header_end = key_end_x + 0.5
                 sp = staff.line_spacing
+                key_changes = find_key_changes(
+                    accidentals, staff, measures, [n for n in staff_notes_raw if not n["is_rest"]], header_end)
+                cur_key = staff.key_fifths
                 for m in measures:
+                    if id(m) in key_changes:
+                        cur_key = key_changes[id(m)][0]
+                    m.key_fifths = cur_key
+                    key_zone_end = key_changes[id(m)][1] if id(m) in key_changes else header_end
                     acc_state: Dict = {}
                     for n in m.notes:
                         if n["is_rest"]:
@@ -328,7 +418,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         hx0 = n["bbox"][0] if n.get("bbox") else n["x"]
                         nearby_acc = [
                             a for a in accidentals
-                            if a["x"] > header_end
+                            if a["x"] > key_zone_end
                             and 0 < hx0 - a["x"] < 3.2 * sp
                             and abs(n["y"] - a["y"]) < 0.4 * sp
                         ]
@@ -342,7 +432,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                             clef_line=staff.clef_line,
                             clef_octave=staff.clef_octave,
                             explicit_accidental=exp_acc,
-                            key_fifths=staff.key_fifths,
+                            key_fifths=cur_key,
                             measure_accidental_state=acc_state,
                         )
                         n["step"] = pitch.step
@@ -350,27 +440,32 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         n["alter"] = pitch.alter
                         n["accidental"] = pitch.accidental
 
+                # Ties (filled arcs joining two noteheads of the same pitch)
+                mark_ties(staff, staff_notes_raw, tie_arcs)
+
                 # Time signature changes inside the staff (stacked digit pairs after the header)
                 ts_changes = find_time_signature_changes(glyphs, staff, first_header_note_x)
 
                 # Renumber measures consecutively
                 cur_beats = staff.time_beats or score_time_beats
                 cur_beat_type = staff.time_beat_type or score_time_beat_type
+                cur_symbol = staff.time_symbol or None
                 for m in measures:
                     m.measure_number = part_measure_counters[p_idx_for_staff]
                     part_measure_counters[p_idx_for_staff] += 1
-                    for tx, b, bt in ts_changes:
+                    for tx, b, bt, sym in ts_changes:
                         # A time signature sits right after the barline that opens its bar
                         if m.x0 - 2 <= tx < m.x0 + 4 * staff.line_spacing:
-                            cur_beats, cur_beat_type = b, bt
-                            score_time_beats, score_time_beat_type = b, bt
+                            cur_beats, cur_beat_type, cur_symbol = b, bt, sym
+                    part_time[p_idx_for_staff] = (cur_beats, cur_beat_type, cur_symbol)
 
                     # Prepare dict for writer
                     m_dict = {
                         "number": m.measure_number,
-                        "key_fifths": staff.key_fifths,
+                        "key_fifths": getattr(m, "key_fifths", staff.key_fifths),
                         "time_beats": cur_beats,
                         "time_beat_type": cur_beat_type,
+                        "time_symbol": cur_symbol,
                         "clef_sign": staff.clef_sign,
                         "clef_line": staff.clef_line,
                         "clef_octave": staff.clef_octave,
@@ -408,6 +503,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
             # Largest font / center text is usually title
             if not title and len(txt) > 2 and not txt.startswith("©"):
                 title = txt
+
+    _pair_ties(parts)
 
     return {
         "title": title,

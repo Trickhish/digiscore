@@ -84,6 +84,10 @@ def extract_barlines_for_staff(
         if _is_note_stem(x, y0, y1, noteheads, sp):
             continue
         if not barlines or abs(x - barlines[-1].x) > 2.0:
+            # Thin+thick pairs (double, final, repeat barlines) are one barline
+            if barlines and x - barlines[-1].x < 1.2 * sp:
+                barlines[-1].bar_type = "double"
+                continue
             barlines.append(Barline(x=x, y0=y0, y1=y1))
 
     # Check for repeat dots near barlines
@@ -135,6 +139,11 @@ def create_measures_for_staff(
         # Notes between curr_x0 and bl.x
         meas_notes = [n for n in notes if curr_x0 - 2 <= n.get("x", 0) < bl.x + 2]
         meas_notes.sort(key=lambda n: n.get("x", 0))
+
+        # Only the clef/key/time header before a start-repeat or double barline
+        if not measures and not meas_notes:
+            curr_x0 = bl.x
+            continue
 
         m = Measure(
             measure_number=meas_num,

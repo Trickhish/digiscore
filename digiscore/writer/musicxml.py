@@ -61,12 +61,13 @@ def build_musicxml(
 
         measures = p.get("measures", [])
         prev_sig = None
+        prev_time = None
         for m_idx, m in enumerate(measures):
             m_num = str(m.get("number", m_idx + 1))
             meas_elem = etree.SubElement(part_elem, "measure", number=m_num)
 
             sig = (
-                m.get("key_fifths"), m.get("time_beats"), m.get("time_beat_type"),
+                m.get("key_fifths"), m.get("time_beats"), m.get("time_beat_type"), m.get("time_symbol"),
                 m.get("clef_sign"), m.get("clef_line"), m.get("clef_octave"),
             )
             changed = sig != prev_sig
@@ -87,11 +88,17 @@ def build_musicxml(
                 # Time signature
                 beats = m.get("time_beats", score_data.get("time_beats", 4))
                 beat_type = m.get("time_beat_type", score_data.get("time_beat_type", 4))
-                time_elem = etree.SubElement(attrs, "time")
-                b_elem = etree.SubElement(time_elem, "beats")
-                b_elem.text = str(beats)
-                bt_elem = etree.SubElement(time_elem, "beat-type")
-                bt_elem.text = str(beat_type)
+                symbol = m.get("time_symbol")
+                time_key = (beats, beat_type, symbol)
+                if time_key != prev_time:
+                    time_elem = etree.SubElement(attrs, "time")
+                    if symbol in ("common", "cut"):
+                        time_elem.set("symbol", symbol)
+                    b_elem = etree.SubElement(time_elem, "beats")
+                    b_elem.text = str(beats)
+                    bt_elem = etree.SubElement(time_elem, "beat-type")
+                    bt_elem.text = str(beat_type)
+                    prev_time = time_key
 
                 # Clef
                 clef_sign = m.get("clef_sign", p.get("clef_sign", "G"))
@@ -187,6 +194,9 @@ def _write_note(meas_elem, note: dict, divisions: int, voice: int, is_chord: boo
     dur_divs = max(1, int(round(quarters * divisions)))
     d_elem = etree.SubElement(note_elem, "duration")
     d_elem.text = str(dur_divs)
+    tie_types = [t for t in ("stop", "start") if note.get(f"tie_{t}") and not is_rest]
+    for t in tie_types:
+        etree.SubElement(note_elem, "tie", type=t)
 
     v_elem = etree.SubElement(note_elem, "voice")
     v_elem.text = str(voice)
@@ -203,6 +213,11 @@ def _write_note(meas_elem, note: dict, divisions: int, voice: int, is_chord: boo
     if acc:
         acc_elem = etree.SubElement(note_elem, "accidental")
         acc_elem.text = acc
+
+    if tie_types:
+        notations = etree.SubElement(note_elem, "notations")
+        for t in tie_types:
+            etree.SubElement(notations, "tied", type=t)
 
     # Lyrics
     for lyr in sorted(lyrics, key=lambda l: l.get("verse", 1)):
