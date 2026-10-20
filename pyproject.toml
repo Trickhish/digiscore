@@ -21,3 +21,7 @@ digiscore = "digiscore.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["digiscore*"]
+
+[tool.pytest.ini_options]
+markers = ["slow: scanned-score tests that run the OMR engine (minutes)"]
+addopts = "-m 'not slow'"

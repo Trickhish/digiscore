@@ -50,12 +50,25 @@ def find_tessdata_dir() -> Optional[str]:
     return None
 
 
+def _count_sheets(spec: str, n_pages: int) -> int:
+    """Number of pages selected by a NoteLite sheet spec such as "1 3-5"."""
+    total = 0
+    for tok in spec.replace(",", " ").split():
+        if "-" in tok:
+            a, b = tok.split("-", 1)
+            total += max(0, min(int(b), n_pages) - int(a) + 1)
+        elif tok.isdigit():
+            total += 1
+    return total or n_pages
+
+
 def run_notelite_omr(
     pdf_path: str,
     output_path: Optional[str] = None,
     sheets: Optional[str] = None,
-    timeout_sec: int = 300,
+    timeout_sec: Optional[int] = None,
     pdf_dpi: int = 400,
+    keep_book: Optional[str] = None,
 ) -> str:
     """
     Runs NoteLite OMR on the input PDF file and outputs MusicXML (.mxl or .musicxml).
@@ -79,6 +92,17 @@ def run_notelite_omr(
     if not os.path.isfile(abs_pdf):
         raise FileNotFoundError(f"Input PDF not found: {abs_pdf}")
 
+    if timeout_sec is None:
+        # Roughly 40-60 s per page at 400 DPI; leave a wide margin
+        try:
+            import pymupdf
+            n_pages = len(pymupdf.open(abs_pdf))
+        except Exception:
+            n_pages = 10
+        if sheets:
+            n_pages = min(n_pages, _count_sheets(str(sheets), n_pages))
+        timeout_sec = 120 + 120 * n_pages
+
     # Prepare environment with TESSDATA_PREFIX
     env = os.environ.copy()
     tessdata = find_tessdata_dir()
@@ -90,6 +114,9 @@ def run_notelite_omr(
             notelite_bin, "-batch", "-export", "-output", tmp_dir,
             # Scans render too small at the default 300 DPI: notes get dropped
             "-constant", f"com.notelite.omr.image.ImageLoading.pdfResolution={pdf_dpi}",
+            # On blurred or noisy scans the beam thickness is under-estimated and
+            # real beams are then rejected; force a realistic lower bound
+            "-constant", "com.notelite.omr.sheet.ScaleBuilder.beamMinFraction=0.4",
         ]
         if sheets:
             cmd.extend(["-sheets", str(sheets)])
@@ -137,5 +164,11 @@ def run_notelite_omr(
                     shutil.copy2(produced_file, output_path)
         else:
             shutil.copy2(produced_file, output_path)
+
+        # Keep the project file next to the output: it holds the page geometry
+        if keep_book:
+            books = list(Path(tmp_dir).glob("*.omr"))
+            if books:
+                shutil.copy2(books[0], keep_book)
 
         return str(output_path)

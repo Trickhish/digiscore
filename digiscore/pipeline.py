@@ -5,6 +5,7 @@ and enriches the resulting MusicXML with AI metadata.
 """
 
 import os
+import warnings
 import tempfile
 import zipfile
 from pathlib import Path
@@ -12,6 +13,10 @@ from typing import Dict, Optional, Tuple
 import pymupdf
 
 from digiscore.omr.notelite import is_notelite_available, run_notelite_omr
+from digiscore.omr import lyrics_ocr
+from digiscore.omr.book import read_book
+from digiscore.omr.postprocess import merge_split_parts
+from digiscore.omr.repair import repair_missing_dots, repair_missing_rests, split_merged_measures
 from digiscore.vector.parser import parse_vector_score
 from digiscore.vector.staff import detect_staves_on_page
 from digiscore.vision.client import VisionClient, enrich_musicxml_with_metadata
@@ -136,8 +141,36 @@ def convert_score(
             raise RuntimeError("NoteLite OMR engine is requested but not available.")
         with tempfile.TemporaryDirectory(prefix="digiscore_omr_") as tmp_dir:
             tmp_mxl = os.path.join(tmp_dir, f"{input_stem}.mxl")
-            run_notelite_omr(abs_input, output_path=tmp_mxl, sheets=sheets)
+            tmp_book = os.path.join(tmp_dir, f"{input_stem}.omr")
+            run_notelite_omr(abs_input, output_path=tmp_mxl, sheets=sheets, keep_book=tmp_book)
             xml_content = read_musicxml_from_file(tmp_mxl)
+            book = None
+            if os.path.isfile(tmp_book):
+                try:
+                    book = read_book(tmp_book)
+                except Exception as e:
+                    warnings.warn(f"Could not read the OMR project file: {e}")
+            if book is not None:
+                # Rhythm repairs checked against the page image
+                try:
+                    xml_content, _ = repair_missing_dots(xml_content, book, abs_input)
+                    xml_content, _ = repair_missing_rests(xml_content, book, abs_input)
+                except Exception as e:
+                    warnings.warn(f"Measure repair skipped: {e}")
+                if lyrics_ocr.is_available():
+                    try:
+                        vision = VisionClient(timeout=60) if use_ai else None
+                        if vision is not None and not vision.is_available:
+                            vision = None
+                        xml_content = lyrics_ocr.relyric(xml_content, book, abs_input, vision=vision)
+                    except Exception as e:
+                        warnings.warn(f"Lyrics re-recognition skipped: {e}")
+                # Last: changes measure indexes, which the steps above rely on
+                try:
+                    xml_content, _ = split_merged_measures(xml_content, book, abs_input)
+                except Exception as e:
+                    warnings.warn(f"Measure split skipped: {e}")
+            xml_content = merge_split_parts(xml_content)
     else:
         raise ValueError(f"Unknown engine: {engine}. Choose 'auto', 'vector', or 'notelite'.")
 

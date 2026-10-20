@@ -133,6 +133,54 @@ class VisionClient:
             # Fallback gracefully if AI is unavailable or fails
             return {"error": str(e)}
 
+    def correct_lyric_line(self, image_png: bytes, syllables: List[str]) -> Optional[List[str]]:
+        """
+        Correct OCR mistakes in one line of sung lyrics.
+
+        `syllables` are the syllables already placed on the notes, in order. The model
+        sees the line image and returns one corrected string per syllable, so the
+        alignment with the notes cannot change. Returns None when unavailable or
+        when the answer does not have the same number of items.
+        """
+        if not self.is_available or not syllables:
+            return None
+        prompt = (
+            "This image is one line of lyrics printed under a music staff. An OCR read it "
+            "as the following syllables, one per sung note, in order:\n"
+            f"{json.dumps(syllables, ensure_ascii=False)}\n\n"
+            "Fix only reading mistakes using the image: wrong or missing letters, accents "
+            "(e.g. O vs Ô, e vs é/è), apostrophes, and punctuation attached to a syllable. "
+            "Do not merge, split, add or remove items, and do not include hyphens. "
+            "If an item is unreadable, keep it as it is.\n"
+            f"Return ONLY a JSON array of exactly {len(syllables)} strings."
+        )
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(image_png).decode()}},
+            ],
+        }]
+        try:
+            raw = self._chat_completion(messages, max_tokens=60 + 12 * len(syllables))
+        except Exception:
+            return None
+        match = re.search(r"\[.*\]", raw, re.DOTALL)
+        if not match:
+            return None
+        try:
+            fixed = json.loads(match.group(0))
+        except Exception:
+            return None
+        if not isinstance(fixed, list) or len(fixed) != len(syllables):
+            return None
+        out = []
+        for old, new in zip(syllables, fixed):
+            new = str(new).strip().strip("-")
+            # Guard against rewrites: keep the OCR text unless the change is small
+            out.append(new if new and _close(old, new) else old)
+        return out
+
     def verify_and_clean_lyrics(self, lyrics_text: str, language: str = "French") -> str:
         """
         Proofreads and cleans lyric text or verses, fixing OCR spelling or hyphenation errors.
@@ -153,6 +201,21 @@ class VisionClient:
             return self._chat_completion(messages, max_tokens=1000).strip()
         except Exception:
             return lyrics_text
+
+
+def _close(a: str, b: str) -> bool:
+    """Small edit: accents, a letter or two, punctuation."""
+    import difflib
+    import unicodedata
+
+    def base(s):
+        s = unicodedata.normalize("NFKD", s)
+        return "".join(c for c in s if not unicodedata.combining(c)).lower()
+
+    if base(a) == base(b):
+        return True
+    ratio = difflib.SequenceMatcher(None, base(a), base(b)).ratio()
+    return ratio >= 0.6 and abs(len(a) - len(b)) <= 2
 
 
 def _new_creator(ident, kind: str):

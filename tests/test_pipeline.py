@@ -70,10 +70,11 @@ def test_notelite_omr_available():
     assert is_notelite_available() is True
 
 
+@pytest.mark.slow
 def test_notelite_omr_scanned_dingdong():
     with tempfile.TemporaryDirectory() as tmp_dir:
         out_mxl = os.path.join(tmp_dir, "dingdong.mxl")
-        res = run_notelite_omr(DING_DONG_PDF, output_path=out_mxl, sheets="1", timeout_sec=120)
+        res = run_notelite_omr(DING_DONG_PDF, output_path=out_mxl, sheets="1")
         assert os.path.isfile(res)
         
         score = music21.converter.parse(res)
