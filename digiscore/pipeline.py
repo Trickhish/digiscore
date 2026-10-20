@@ -144,6 +144,30 @@ def convert_score(
             tmp_book = os.path.join(tmp_dir, f"{input_stem}.omr")
             run_notelite_omr(abs_input, output_path=tmp_mxl, sheets=sheets, keep_book=tmp_book)
             xml_content = read_musicxml_from_file(tmp_mxl)
+
+            # If the OMR missed the time signature, ask the AI (or infer it from the
+            # bar lengths), write it into the project and let NoteLite redo the rhythm
+            if os.path.isfile(tmp_book) and "<time>" not in xml_content:
+                try:
+                    from digiscore.omr.inject_time import (
+                        detect_time_signature, guess_time_from_durations, inject_time_into_omr,
+                    )
+                    ts = None
+                    if use_ai:
+                        vc = VisionClient(timeout=90)
+                        if vc.is_available:
+                            ts = detect_time_signature(abs_input, vc)
+                    if not ts:
+                        ts = guess_time_from_durations(xml_content)
+                    if ts:
+                        print(f"[*] Time signature missing in OMR output; using {ts}")
+                    if ts and inject_time_into_omr(tmp_book, ts):
+                        # The project only holds the selected sheets: no -sheets here
+                        run_notelite_omr(tmp_book, output_path=tmp_mxl, keep_book=tmp_book)
+                        xml_content = read_musicxml_from_file(tmp_mxl)
+                except Exception as e:
+                    warnings.warn(f"Time signature injection skipped: {e}")
+
             book = None
             if os.path.isfile(tmp_book):
                 try:

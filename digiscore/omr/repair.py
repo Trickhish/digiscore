@@ -8,7 +8,7 @@ dot-sized dark spot to the right of that note's head, the dot is added.
 """
 
 from fractions import Fraction
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pymupdf
@@ -276,27 +276,22 @@ def _barline_seen(img: np.ndarray, xa: float, xb: float, top: float, bottom: flo
     return xa + (left + right) // 2
 
 
+_UNSEEN = object()
+
+
 def split_merged_measures(xml_content: str, sheets: List[SheetInfo], pdf_path: str) -> Tuple[str, int]:
     """
-    A missed barline merges two bars into one that is exactly twice as long. When
-    every part of such a stack splits cleanly at the bar length and the image shows
-    a barline between the two notes on either side, the measure is split.
+    A barline the OMR engine missed merges bars: the stack comes out two or three
+    bar lengths long with all its notes. Every staff proposes a cut at each
+    multiple of the current bar length where no note crosses the cut and the page
+    image shows a full-staff vertical stroke between the notes on either side; a
+    cut confirmed by every staff of the system is applied to every part.
     """
     root = etree.fromstring(xml_content.encode("utf-8"))
     parts = [p for p in root.findall("part")]
     by_id = {p.get("id"): p.findall("measure") for p in parts}
     bar_len, divs = _running_attributes(by_id)
     doc = pymupdf.open(pdf_path)
-
-    # Stack index -> geometry of every staff in it
-    stacks: Dict[int, list] = {}
-    for sheet in sheets:
-        if sheet.number - 1 >= len(doc):
-            continue
-        for system in sheet.systems:
-            for staff in system.staves:
-                for sm in staff.measures:
-                    stacks.setdefault(sm.measure_index, []).append((sheet, staff, sm))
 
     images: Dict[int, np.ndarray] = {}
 
@@ -308,90 +303,122 @@ def split_merged_measures(xml_content: str, sheets: List[SheetInfo], pdf_path: s
             images[sheet.number] = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width)
         return images[sheet.number]
 
-    splits = []  # (measure index, quarter offset of the split)
-    for m_idx, entries in sorted(stacks.items()):
-        ok = True
-        offset = None
-        for sheet, staff, sm in entries:
-            measures = by_id.get(staff.part_id)
-            key = (staff.part_id, m_idx)
-            if measures is None or m_idx >= len(measures) or key not in bar_len:
-                ok = False
-                break
-            measure = measures[m_idx]
-            target = bar_len[key]
-            lengths = _voice_lengths(measure, divs[key])
-            if len(lengths) != 1 or next(iter(lengths.values())) != 2 * target:
-                ok = False
-                break
-            # Onsets of sung notes, and the note boundary at the bar length
-            t = Fraction(0)
-            onsets = []
-            boundary_ok = False
-            for n in measure.findall("note"):
-                if n.find("chord") is not None or n.find("grace") is not None:
-                    continue
-                if t == target:
-                    boundary_ok = True
-                if n.find("rest") is None:
-                    onsets.append(t)
-                t += Fraction(int(n.findtext("duration")), divs[key])
-            if not boundary_ok or len(onsets) != len(sm.chords):
-                ok = False
-                break
-            chords = sorted(sm.chords, key=lambda c: (c.voice, c.slot))
-            before = [c for c, o in zip(chords, onsets) if o < target]
-            after = [c for c, o in zip(chords, onsets) if o >= target]
-            xa = max((c.x1 for c in before), default=sm.left) + 0.3 * staff.interline
-            xb = min((c.x0 for c in after), default=sm.right) - 0.3 * staff.interline
-            if _barline_seen(image_for(sheet), xa, xb, staff.top, staff.bottom, staff.interline) is None:
-                ok = False
-                break
-            offset = target
-        if ok and offset is not None:
-            splits.append((m_idx, offset))
+    # Measure index -> cut times all staves confirm; _UNSEEN = no staff looked yet
+    candidates: Dict[int, object] = {}
+    for sheet in sheets:
+        if sheet.number - 1 >= len(doc):
+            continue
+        for system in sheet.systems:
+            for staff in system.staves:
+                measures = by_id.get(staff.part_id)
+                img = None
+                for sm in staff.measures:
+                    m_idx = sm.measure_index
+                    key = (staff.part_id, m_idx)
+                    m = measures[m_idx] if measures and m_idx < len(measures) else None
+                    if m is None or m.get("implicit") == "yes" or key not in bar_len:
+                        candidates[m_idx] = set()
+                        continue
+                    if img is None:
+                        img = image_for(sheet)
+                    cuts = _staff_cuts(m, sm, bar_len[key], divs[key], img, staff)
+                    seen = candidates.get(m_idx, _UNSEEN)
+                    candidates[m_idx] = cuts if seen is _UNSEEN else (seen & cuts)
 
-    for m_idx, offset in sorted(splits, reverse=True):
+    applied = 0
+    for m_idx, cuts in sorted(candidates.items(), key=lambda kv: -kv[0]):
+        if not cuts:
+            continue
         for p in parts:
-            measures = p.findall("measure")
-            if m_idx < len(measures):
-                _split_measure(measures[m_idx], offset, divs[(p.get("id"), m_idx)])
+            ms = p.findall("measure")
+            if m_idx >= len(ms) or ms[m_idx].get("implicit") == "yes":
+                continue
+            for off in sorted(cuts, reverse=True):
+                _split_measure(ms[m_idx], off, divs.get((p.get("id"), m_idx), 1))
+            applied += 1
 
-    if splits:
+    if applied:
         for p in parts:
             # Renumber sequentially, keeping a leading pickup as 0
-            num = 0 if (p.find("measure") is not None and p.find("measure").get("implicit") == "yes") else 1
+            first = p.find("measure")
+            num = 0 if first is not None and first.get("implicit") == "yes" else 1
             for m in p.findall("measure"):
                 m.set("number", str(num))
                 num += 1
 
     out = etree.tostring(root.getroottree(), pretty_print=True, xml_declaration=True, encoding="UTF-8").decode("utf-8")
-    return out, len(splits)
+    return out, applied
+
+
+def _staff_cuts(m, sm, target: Fraction, division: int, img, staff) -> Set[Fraction]:
+    """Cut times this staff confirms: onsets align and the image shows a barline."""
+    if target <= 0:
+        return set()
+    total = Fraction(0)
+    onsets: Dict[str, List[Fraction]] = {}
+    for n in m.findall("note"):
+        if n.find("chord") is not None or n.find("grace") is not None:
+            continue
+        v = n.findtext("voice") or "1"
+        if n.find("rest") is None:
+            onsets.setdefault(v, []).append(total)
+        total += Fraction(int(n.findtext("duration") or 0), division)
+    if total < target or not onsets:
+        return set()
+
+    chords_by_voice: Dict[int, List[Chord]] = {}
+    for c in sm.chords:
+        chords_by_voice.setdefault(c.voice, []).append(c)
+    for lst in chords_by_voice.values():
+        lst.sort(key=lambda x: x.slot)
+
+    # Cut at whole multiples of the bar length, strictly inside the measure
+    wanted = {k * target for k in range(1, int(total // target) + 1) if k * target < total}
+    for v, ons in onsets.items():
+        if set(ons) & wanted:
+            return set()  # a note crosses the cut
+    if set(int(v) for v in onsets) != set(chords_by_voice):
+        return set()  # book/MusicXML voices do not correspond
+
+    cuts: Set[Fraction] = set()
+    for w in sorted(wanted):
+        xa, xb = -1e18, sm.right
+        ok = True
+        for v, ons in onsets.items():
+            chords = chords_by_voice[int(v)]
+            if len(chords) != len(ons):
+                ok = False
+                break
+            before = [c for c, o in zip(chords, ons) if o < w]
+            after = [c for c, o in zip(chords, ons) if o > w]
+            if before:
+                xa = max(xa, max(c.x1 for c in before))
+            if after:
+                xb = min(xb, min(c.x0 for c in after))
+        if not ok or xa >= xb:
+            continue
+        if _barline_seen(img, xa + 0.3 * staff.interline, xb - 0.3 * staff.interline,
+                         staff.top, staff.bottom, staff.interline) is not None:
+            cuts.add(w)
+    return cuts
 
 
 def _split_measure(measure, offset: Fraction, divisions: int) -> None:
-    """Move everything from `offset` on into a new measure right after this one."""
-    new = etree.Element("measure", number=measure.get("number", "0") + "b")
+    """Move everything from time `offset` on into a new measure right after this one."""
+    children = list(measure)
     t = Fraction(0)
-    moving = False
-    for c in list(measure):
+    cut_i = None
+    for i, c in enumerate(children):
         if c.tag == "note" and c.find("chord") is None and c.find("grace") is None:
-            if t >= offset:
-                moving = True
+            if t >= offset and cut_i is None:
+                cut_i = i
             t += Fraction(int(c.findtext("duration") or 0), divisions)
-        elif c.tag in ("backup", "forward"):
-            # Only single-voice measures are split
-            pass
-        if c.tag == "attributes" or c.tag == "print":
-            continue
-        if moving or (c.tag == "barline" and c.get("location") == "right"):
-            measure.remove(c)
-            new.append(c)
-    for attr in ("width",):
-        if measure.get(attr):
-            half = str(int(float(measure.get(attr)) / 2))
-            measure.set(attr, half)
-            new.set(attr, half)
+    if cut_i is None:
+        return
+    new = etree.Element("measure", number=measure.get("number", "1") + "b")
+    for c in children[cut_i:]:
+        measure.remove(c)
+        new.append(c)
     measure.addnext(new)
 
 

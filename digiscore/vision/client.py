@@ -72,7 +72,22 @@ class VisionClient:
         }
 
         url = f"{self.api_base}/chat/completions"
-        resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
+        # The endpoint rate-limits and is sometimes unavailable: retry with backoff
+        import time
+
+        if getattr(self, "_exhausted", False):
+            raise RuntimeError("AI quota exhausted for this run")
+        delay = 4.0
+        for attempt in range(4):
+            resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
+            if resp.status_code == 429 and "quota" in resp.text.lower():
+                self._exhausted = True
+                break
+            if resp.status_code in (429, 500, 502, 503, 504) and attempt < 3:
+                time.sleep(delay)
+                delay *= 2.5
+                continue
+            break
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"]

@@ -128,11 +128,26 @@ def _match_by_usage(ids: List[str], parts) -> Dict[str, str]:
             return {}
         usage[pid] = [_measure_has_music(m) for m in p.findall("measure")]
     n = len(ids)
-    if n % 2:
+    if n % 2 == 0:
+        half = n // 2
+        first, second = ids[:half], ids[half:]
+        if not any(any(x and y for x, y in zip(usage[a], usage[b])) for a, b in zip(first, second)):
+            return {b: a for a, b in zip(first, second)}
+
+    # Sparse parts (music in a few bars only) stand in for main parts in some
+    # systems: pair each, in order, with the next main part it never overlaps
+    n_meas = max((len(u) for u in usage.values()), default=0)
+    sparse = [p for p in ids if sum(usage[p]) <= 0.3 * n_meas]
+    main = [p for p in ids if p not in sparse]
+    if not sparse or not main:
         return {}
-    half = n // 2
-    first, second = ids[:half], ids[half:]
-    for a, b in zip(first, second):
-        if any(x and y for x, y in zip(usage[a], usage[b])):
+    out: Dict[str, str] = {}
+    j = 0
+    for s in sparse:
+        while j < len(main) and any(x and y for x, y in zip(usage[s], usage[main[j]])):
+            j += 1
+        if j >= len(main):
             return {}
-    return {b: a for a, b in zip(first, second)}
+        out[s] = main[j]
+        j += 1
+    return out

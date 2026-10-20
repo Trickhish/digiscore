@@ -4,12 +4,13 @@ Executes NoteLite / Audiveris in batch headless mode to transcribe scanned/raste
 """
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 
 DEFAULT_NOTELITE_PATHS = [
@@ -62,6 +63,70 @@ def _count_sheets(spec: str, n_pages: int) -> int:
     return total or n_pages
 
 
+def _read_score_xml(path: Path) -> str:
+    if path.suffix.lower() == ".mxl":
+        with zipfile.ZipFile(path) as z:
+            name = [n for n in z.namelist() if n.endswith(".xml") and not n.startswith("META-INF")][0]
+            return z.read(name).decode("utf-8")
+    return path.read_text(encoding="utf-8")
+
+
+def join_movements(xmls: List[str]) -> str:
+    """Append the measures of later movements to the first one, part by part."""
+    from lxml import etree
+
+    from digiscore.omr.postprocess import merge_split_parts
+
+    roots = [etree.fromstring(merge_split_parts(x).encode("utf-8")) for x in xmls]
+    base = roots[0]
+    base_parts = base.findall("part")
+    names = [(sp.findtext("part-name") or "").strip().lower() for sp in base.iter("score-part")]
+    for other in roots[1:]:
+        o_parts = other.findall("part")
+        o_names = [(sp.findtext("part-name") or "").strip().lower() for sp in other.iter("score-part")]
+        if len(o_parts) == len(base_parts):
+            pairs = list(zip(base_parts, o_parts))
+        elif len(set(names)) == len(names) and all(n in names for n in o_names):
+            pairs = [(base_parts[names.index(n)], op) for n, op in zip(o_names, o_parts)]
+        else:
+            # Unmatched layout: keep the movements' measures aligned in time by
+            # giving every base part as many empty bars as this movement has
+            pairs = []
+            count = max((len(op.findall("measure")) for op in o_parts), default=0)
+            for bp in base_parts:
+                for _ in range(count):
+                    m = etree.SubElement(bp, "measure")
+                    etree.SubElement(etree.SubElement(m, "note"), "rest").set("measure", "yes")
+                    n = m.find("note")
+                    etree.SubElement(n, "duration").text = "0"
+                    etree.SubElement(n, "voice").text = "1"
+        for bp, op in pairs:
+            for m in op.findall("measure"):
+                bp.append(m)
+    for p in base_parts:
+        first = p.find("measure")
+        num = 0 if first is not None and first.get("implicit") == "yes" else 1
+        for m in p.findall("measure"):
+            # Pickup flags of later movements are not pickups of this score
+            if num > 1 and m.get("implicit") == "yes":
+                del m.attrib["implicit"]
+            m.set("number", str(num))
+            num += 1
+    return etree.tostring(base.getroottree(), xml_declaration=True, encoding="UTF-8").decode("utf-8")
+
+
+def _project_sheets(omr_path: str) -> List[int]:
+    """Sheet numbers present in an .omr project file."""
+    try:
+        with zipfile.ZipFile(omr_path) as z:
+            return sorted(
+                int(re.search(r"#(\d+)/", n).group(1))
+                for n in z.namelist() if re.fullmatch(r"sheet#\d+/sheet#\d+\.xml", n)
+            )
+    except Exception:
+        return []
+
+
 def run_notelite_omr(
     pdf_path: str,
     output_path: Optional[str] = None,
@@ -90,15 +155,28 @@ def run_notelite_omr(
 
     abs_pdf = os.path.abspath(pdf_path)
     if not os.path.isfile(abs_pdf):
-        raise FileNotFoundError(f"Input PDF not found: {abs_pdf}")
+        raise FileNotFoundError(f"Input not found: {abs_pdf}")
+
+    # An .omr project input: NoteLite continues it (steps not yet done), and the
+    # -constant PDF options do not apply
+    is_project = abs_pdf.lower().endswith(".omr")
+    if not is_project:
+        try:
+            import pymupdf
+            pymupdf.open(abs_pdf)
+        except Exception as exc:
+            raise RuntimeError(f"Input is neither a PDF nor an .omr project: {exc}")
 
     if timeout_sec is None:
         # Roughly 40-60 s per page at 400 DPI; leave a wide margin
-        try:
-            import pymupdf
-            n_pages = len(pymupdf.open(abs_pdf))
-        except Exception:
-            n_pages = 10
+        if is_project:
+            n_pages = len(_project_sheets(abs_pdf))
+        else:
+            try:
+                import pymupdf
+                n_pages = len(pymupdf.open(abs_pdf))
+            except Exception:
+                n_pages = 10
         if sheets:
             n_pages = min(n_pages, _count_sheets(str(sheets), n_pages))
         timeout_sec = 120 + 120 * n_pages
@@ -112,15 +190,24 @@ def run_notelite_omr(
     with tempfile.TemporaryDirectory(prefix="notelite_") as tmp_dir:
         cmd = [
             notelite_bin, "-batch", "-export", "-output", tmp_dir,
-            # Scans render too small at the default 300 DPI: notes get dropped
-            "-constant", f"com.notelite.omr.image.ImageLoading.pdfResolution={pdf_dpi}",
-            # On blurred or noisy scans the beam thickness is under-estimated and
-            # real beams are then rejected; force a realistic lower bound
-            "-constant", "com.notelite.omr.sheet.ScaleBuilder.beamMinFraction=0.4",
         ]
+        if not is_project:
+            # Scans render too small at the default 300 DPI: notes get dropped
+            cmd += [
+                "-constant", f"com.notelite.omr.image.ImageLoading.pdfResolution={pdf_dpi}",
+                # On blurred or noisy scans the beam thickness is under-estimated and
+                # real beams are then rejected; force a realistic lower bound
+                "-constant", "com.notelite.omr.sheet.ScaleBuilder.beamMinFraction=0.4",
+            ]
         if sheets:
             cmd.extend(["-sheets", str(sheets)])
-        cmd.extend(["--", abs_pdf])
+        if is_project:
+            # NoteLite exports a project next to the project file: work on a copy
+            local = os.path.join(tmp_dir, os.path.basename(abs_pdf))
+            shutil.copy2(abs_pdf, local)
+            cmd.extend(["--", local])
+        else:
+            cmd.extend(["--", abs_pdf])
 
         proc = subprocess.run(
             cmd,
@@ -142,7 +229,25 @@ def run_notelite_omr(
                 f"NoteLite completed without producing an export file.\nLog:\n{error_log[-1000:]}"
             )
 
-        produced_file = score_files[0]
+        # NoteLite may cut the score into movements (name.mvt1.mxl, name.mvt2.mxl...)
+        # when a system looks like a new start; on choral scores these are nearly
+        # always continuations, so join them back into one score
+        mvts = sorted(
+            (f for f in score_files if re.search(r"\.mvt\d+\.mxl$", f.name)),
+            key=lambda f: int(re.search(r"\.mvt(\d+)\.mxl$", f.name).group(1)),
+        )
+        if len(mvts) > 1:
+            joined = Path(tmp_dir) / "joined.mxl"
+            with zipfile.ZipFile(joined, "w", zipfile.ZIP_DEFLATED) as zj:
+                zj.writestr(
+                    "META-INF/container.xml",
+                    '<?xml version="1.0" encoding="UTF-8"?><container><rootfiles>'
+                    '<rootfile full-path="score.xml"/></rootfiles></container>',
+                )
+                zj.writestr("score.xml", join_movements([_read_score_xml(f) for f in mvts]))
+            produced_file = joined
+        else:
+            produced_file = score_files[0]
 
         # Determine target output path
         if not output_path:
