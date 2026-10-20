@@ -153,7 +153,15 @@ def convert_score(
         with tempfile.TemporaryDirectory(prefix="digiscore_omr_") as tmp_dir:
             tmp_mxl = os.path.join(tmp_dir, f"{input_stem}.mxl")
             tmp_book = os.path.join(tmp_dir, f"{input_stem}.omr")
-            run_notelite_omr(abs_input, output_path=tmp_mxl, sheets=sheets, keep_book=tmp_book)
+            # Low-resolution scans: upscale and binarise before OMR
+            omr_input = abs_input
+            try:
+                from digiscore.omr.enhance import enhance_pdf, needs_enhancement
+                if needs_enhancement(abs_input):
+                    omr_input = enhance_pdf(abs_input, os.path.join(tmp_dir, f"{input_stem}.pdf"))
+            except Exception as e:
+                warnings.warn(f"Scan enhancement skipped: {e}")
+            run_notelite_omr(omr_input, output_path=tmp_mxl, sheets=sheets, keep_book=tmp_book)
             xml_content = read_musicxml_from_file(tmp_mxl)
 
             # If the OMR missed the time signature, ask the AI (or infer it from the
@@ -184,6 +192,14 @@ def convert_score(
 
             book = None
             if os.path.isfile(tmp_book):
+                keep = os.environ.get("DIGISCORE_KEEP_OMR")
+                if keep:
+                    import shutil
+                    os.makedirs(keep, exist_ok=True)
+                    shutil.copy2(tmp_book, keep)
+                    shutil.copy2(tmp_mxl, keep)
+                    if omr_input != abs_input:
+                        shutil.copy2(omr_input, os.path.join(keep, f"{input_stem}.enhanced.pdf"))
                 try:
                     book = read_book(tmp_book)
                 except Exception as e:
@@ -191,10 +207,17 @@ def convert_score(
             if book is not None:
                 # Rhythm repairs checked against the page image
                 try:
-                    xml_content, _ = repair_missing_dots(xml_content, book, abs_input)
-                    xml_content, _ = repair_missing_rests(xml_content, book, abs_input)
+                    xml_content, _ = repair_missing_dots(xml_content, book, omr_input)
+                    xml_content, _ = repair_missing_rests(xml_content, book, omr_input)
                 except Exception as e:
                     warnings.warn(f"Measure repair skipped: {e}")
+                # Bars that still do not add up: onsets from the other staves
+                if os.environ.get("DIGISCORE_NO_ALIGN") != "1":
+                    try:
+                        from digiscore.omr.align import realign_from_other_staves
+                        xml_content, _ = realign_from_other_staves(xml_content, book)
+                    except Exception as e:
+                        warnings.warn(f"Cross-staff realignment skipped: {e}")
                 if lyrics_ocr.is_available():
                     try:
                         vision = VisionClient(timeout=60) if use_ai else None
@@ -205,7 +228,7 @@ def convert_score(
                         warnings.warn(f"Lyrics re-recognition skipped: {e}")
                 # Last: changes measure indexes, which the steps above rely on
                 try:
-                    xml_content, _ = split_merged_measures(xml_content, book, abs_input)
+                    xml_content, _ = split_merged_measures(xml_content, book, omr_input)
                 except Exception as e:
                     warnings.warn(f"Measure split skipped: {e}")
             xml_content = merge_split_parts(xml_content)

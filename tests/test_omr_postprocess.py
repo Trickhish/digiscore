@@ -51,3 +51,33 @@ def test_join_movements_keeps_parts_apart_with_identical_names():
     assert _usage(out) == ["NNRN", "NRNN"]
     root = etree.fromstring(out.encode())
     assert [m.get("number") for m in root.find("part").findall("measure")] == ["1", "2", "3", "4"]
+
+
+def test_cross_staff_realign_extends_short_note():
+    from digiscore.omr.align import realign_from_other_staves
+    from digiscore.omr.book import Chord, SheetInfo, StaffInSystem, StaffMeasure, SystemInfo
+
+    def note(step, dur, typ):
+        return (f"<note><pitch><step>{step}</step><octave>4</octave></pitch>"
+                f"<duration>{dur}</duration><voice>1</voice><type>{typ}</type></note>")
+
+    attrs = "<attributes><divisions>2</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>"
+    # Staff 1 is right (4 quarters); staff 2 read its first half note as a quarter
+    p1 = attrs + "".join(note(s, 2, "quarter") for s in "CDEF")
+    p2 = attrs + note("A", 2, "quarter") + note("B", 2, "quarter") + note("C", 2, "quarter")
+    xml = ('<?xml version="1.0" encoding="UTF-8"?><score-partwise version="4.0"><part-list>'
+           '<score-part id="P1"><part-name>S</part-name></score-part>'
+           '<score-part id="P2"><part-name>A</part-name></score-part></part-list>'
+           f'<part id="P1"><measure number="1">{p1}</measure></part>'
+           f'<part id="P2"><measure number="1">{p2}</measure></part></score-partwise>')
+
+    def staff(pid, xs):
+        chords = [Chord(f"{pid}{i}", x - 5, x + 5, 0, 10, voice=1, slot=i + 1) for i, x in enumerate(xs)]
+        return StaffInSystem("1", pid, 0, 100, 20.0, [StaffMeasure(0, 0, 500, chords)])
+
+    sheets = [SheetInfo(1, 1000, 1000, [SystemInfo([staff("P1", [100, 200, 300, 400]), staff("P2", [100, 300, 400])])])]
+    out, n = realign_from_other_staves(xml, sheets)
+    assert n == 1
+    alto = etree.fromstring(out.encode()).findall("part")[1]
+    assert [x.findtext("duration") for x in alto.iter("note")] == ["4", "2", "2"]
+    assert alto.find(".//note").findtext("type") == "half"

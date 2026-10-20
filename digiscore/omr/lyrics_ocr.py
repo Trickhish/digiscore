@@ -81,6 +81,36 @@ def _ocr_boxes(img: Image.Image, langs: str, tessdata: str) -> List[Tuple[str, i
     return out
 
 
+LYRIC_IMAGE_MODE = os.environ.get("DIGISCORE_LYRIC_IMAGE", "lanczos")
+
+
+def _page_image(page, zoom: float) -> Image.Image:
+    """
+    Page in grayscale at the OMR resolution. For a low-resolution scan the page
+    is rendered at its native resolution and upscaled with Lanczos, which keeps
+    letter edges sharper than the PDF renderer's resampling.
+    """
+    mode = LYRIC_IMAGE_MODE
+    if mode == "plain":
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
+        return Image.frombytes("L", (pix.width, pix.height), pix.samples)
+    from digiscore.omr.enhance import page_image_dpi
+
+    native = page_image_dpi(page) or 72 * zoom
+    target_w = int(round(page.rect.width * zoom))
+    target_h = int(round(page.rect.height * zoom))
+    if native >= 72 * zoom * 0.9:
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
+        return Image.frombytes("L", (pix.width, pix.height), pix.samples)
+    pix = page.get_pixmap(dpi=int(round(native)), colorspace=pymupdf.csGRAY)
+    small = Image.frombytes("L", (pix.width, pix.height), pix.samples)
+    big = small.resize((target_w, target_h), Image.LANCZOS)
+    if mode == "lanczos-sharp":
+        from PIL import ImageFilter
+        big = big.filter(ImageFilter.UnsharpMask(radius=2, percent=120, threshold=2))
+    return big
+
+
 def _png_bytes(img: Image.Image) -> bytes:
     import io
     buf = io.BytesIO()
@@ -332,8 +362,7 @@ def relyric(
             continue
         page = doc[sheet.number - 1]
         zoom = sheet.width / page.rect.width
-        pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
-        img = Image.frombytes("L", (pix.width, pix.height), pix.samples)
+        img = _page_image(page, zoom)
 
         for system in sheet.systems:
             for staff in system.staves:
