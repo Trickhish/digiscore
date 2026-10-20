@@ -113,3 +113,20 @@ def test_output_validates_against_musicxml_schema(pdf):
     with tempfile.TemporaryDirectory() as tmp:
         out = convert_score(pdf, os.path.join(tmp, "s.musicxml"), engine="vector", use_ai=False)
         assert schema.validate(etree.parse(out)), schema.error_log
+
+
+SYNTHETIC = sorted(glob.glob("examples/synthetic/*.pdf"))
+
+
+@pytest.mark.parametrize("pdf", SYNTHETIC)
+def test_synthetic_vector_exact(pdf, tmp_path):
+    """MuseScore-rendered scores: notes, ties, lyrics and time signatures all exact."""
+    import sys
+    sys.path.insert(0, "tools")
+    from bench_synthetic import compare
+    out = str(tmp_path / "out.musicxml")
+    convert_score(pdf, out, engine="vector", use_ai=False)
+    r = compare(out, pdf[:-4] + ".mxl")
+    a, b = r["ties"].split(" ")[0].split("/")
+    assert r["notes"] == 1.0 and r["time"] == "ok" and a == b and "+" not in r["ties"], r
+    assert r["lyrics"] in (None, 1.0), r

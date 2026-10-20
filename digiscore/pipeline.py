@@ -170,7 +170,7 @@ def convert_score(
             if os.path.isfile(tmp_book):
                 try:
                     from digiscore.omr.timesig import detect_time_signature_in_book
-                    image_ts, image_symbol, _ = detect_time_signature_in_book(read_book(tmp_book), omr_input)
+                    image_ts, image_symbol, _ = detect_time_signature_in_book(read_book(tmp_book), abs_input, omr_input)
                 except Exception as e:
                     warnings.warn(f"Time signature reading skipped: {e}")
 
@@ -246,6 +246,8 @@ def convert_score(
                 except Exception as e:
                     warnings.warn(f"Measure split skipped: {e}")
             xml_content = merge_split_parts(xml_content)
+            from digiscore.omr.postprocess import fix_measure_rests
+            xml_content = fix_measure_rests(xml_content)
     else:
         raise ValueError(f"Unknown engine: {engine}. Choose 'auto', 'vector', or 'notelite'.")
 

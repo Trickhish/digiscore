@@ -151,3 +151,50 @@ def _match_by_usage(ids: List[str], parts) -> Dict[str, str]:
         out[s] = main[j]
         j += 1
     return out
+
+
+def fix_measure_rests(xml_content: str) -> str:
+    """
+    Whole-bar rests and empty bars get the bar's full length: the OMR engine
+    writes measure rests with a zero duration, which is not valid MusicXML.
+    """
+    from fractions import Fraction
+
+    root = etree.fromstring(xml_content.encode("utf-8"))
+    changed = False
+    for part in root.findall("part"):
+        div, beats, beat_type = 1, 4, 4
+        for m in part.findall("measure"):
+            a = m.find("attributes")
+            if a is not None:
+                if a.findtext("divisions"):
+                    div = int(a.findtext("divisions"))
+                if a.find("time") is not None and a.findtext("time/beats", "").isdigit():
+                    beats, beat_type = int(a.findtext("time/beats")), int(a.findtext("time/beat-type"))
+            bar = Fraction(4 * beats, beat_type) * div
+            if bar.denominator != 1:
+                continue
+            notes = m.findall("note")
+            for n in notes:
+                d = n.find("duration")
+                if d is not None and (d.text or "0").strip() in ("0", ""):
+                    r = n.find("rest")
+                    if r is not None and n.find("grace") is None:
+                        d.text = str(int(bar))
+                        r.set("measure", "yes")
+                        changed = True
+            if not notes and m.get("implicit") != "yes":
+                rest = etree.Element("note")
+                etree.SubElement(rest, "rest", measure="yes")
+                etree.SubElement(rest, "duration").text = str(int(bar))
+                etree.SubElement(rest, "voice").text = "1"
+                bl = m.find("barline")
+                if bl is not None and bl.get("location") != "left":
+                    bl.addprevious(rest)
+                else:
+                    m.append(rest)
+                changed = True
+    if not changed:
+        return xml_content
+    return etree.tostring(root.getroottree(), pretty_print=True, xml_declaration=True,
+                          encoding="UTF-8").decode("utf-8")

@@ -186,6 +186,22 @@ def apply_time_signature(xml_content: str, time_sig: str, symbol: str | None = N
         m = part.find("measure")
         if m is None:
             continue
+        # Later restatements with the same bar length (the engine repeats the
+        # injected signature at system starts) carry no information: drop them
+        prev = None
+        for mm in part.findall("measure")[1:]:
+            t = mm.find("attributes/time")
+            if t is None:
+                continue
+            try:
+                f = Fraction(int(t.findtext("beats")), int(t.findtext("beat-type")))
+            except (TypeError, ValueError):
+                continue
+            if f == (prev if prev is not None else want):
+                t.getparent().remove(t)
+                changed = True
+            else:
+                prev = f
         attrs = m.find("attributes")
         cur = attrs.find("time") if attrs is not None else None
         if cur is not None:

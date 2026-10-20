@@ -81,3 +81,31 @@ def test_cross_staff_realign_extends_short_note():
     alto = etree.fromstring(out.encode()).findall("part")[1]
     assert [x.findtext("duration") for x in alto.iter("note")] == ["4", "2", "2"]
     assert alto.find(".//note").findtext("type") == "half"
+
+
+def test_fix_measure_rests_gives_full_bar():
+    from digiscore.omr.postprocess import fix_measure_rests
+    xml = ('<?xml version="1.0"?><score-partwise version="4.0"><part-list><score-part id="P1">'
+           '<part-name>S</part-name></score-part></part-list><part id="P1">'
+           '<measure number="1"><attributes><divisions>2</divisions><time><beats>3</beats>'
+           '<beat-type>4</beat-type></time></attributes><note><rest measure="yes"/><duration>0</duration>'
+           '<voice>1</voice></note></measure><measure number="2"/></part></score-partwise>')
+    root = etree.fromstring(fix_measure_rests(xml).encode())
+    ms = root.findall(".//measure")
+    assert ms[0].findtext("note/duration") == "6"
+    assert ms[1].findtext("note/duration") == "6"
+
+
+def test_drop_invalid_sheets(tmp_path):
+    import zipfile
+    from digiscore.omr.notelite import _drop_invalid_sheets
+    p = tmp_path / "b.omr"
+    with zipfile.ZipFile(p, "w") as z:
+        z.writestr("book.xml", '<book><sheet number="1"><x/></sheet><sheet number="2" invalid="true"><x/></sheet></book>')
+        z.writestr("sheet#1/sheet#1.xml", "<sheet/>")
+        z.writestr("sheet#2/sheet#2.xml", "<sheet/>")
+    assert _drop_invalid_sheets(str(p))
+    with zipfile.ZipFile(p) as z:
+        assert "sheet#2/sheet#2.xml" not in z.namelist()
+        assert 'number="2"' not in z.read("book.xml").decode()
+    assert not _drop_invalid_sheets(str(p))

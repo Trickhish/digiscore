@@ -72,3 +72,15 @@ output_path = convert_score(
 ```bash
 pytest -v tests/
 ```
+
+## Synthetic ground truth
+
+`examples/synthetic/` holds generated scores (various meters including cut and
+common time, 1-4 voices, multiple verses, ties, repeats, key and time changes)
+with the MusicXML that MuseScore 4 rendered them from:
+
+```bash
+python tools/make_synthetic.py --count 20          # needs MuseScore 4 (MSCORE=path) and xvfb-run
+python tools/bench_synthetic.py                    # vector path
+python tools/bench_synthetic.py --scan 130 --engine notelite   # same scores as 130 DPI fake scans
+```

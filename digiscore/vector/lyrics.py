@@ -39,7 +39,7 @@ def _is_music_char(c: str, font: str) -> bool:
     return any(h in f for h in MUSIC_FONT_HINTS)
 
 
-def extract_text_tokens(page, gap_ratio: float = 0.04) -> List[Tuple]:
+def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
     """
     Text tokens (x0, y0, x1, y1, text) built from individual characters.
     Splits on spaces and on horizontal gaps, because engravers often place separate

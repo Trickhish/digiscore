@@ -161,32 +161,40 @@ def header_window(staff) -> Optional[Tuple[float, float]]:
     return start, end
 
 
-def detect_time_signature_in_book(sheets: List, pdf_path: str
+def detect_time_signature_in_book(sheets: List, *pdf_paths: str
                                   ) -> Tuple[Optional[str], Optional[str], Dict[str, float]]:
     """
-    Time signature of the first system, summed over its staves.
-    Returns (rational, symbol, summed scores) or (None, None, {}) when unsure.
+    Time signature of the first system, averaged over its staves. Several PDFs
+    of the same pages (the original scan, a cleaned-up copy) may be given: each
+    candidate keeps its best score among them.
+    Returns (rational, symbol, mean scores) or (None, None, scores) when unsure.
     """
     import pymupdf
 
     if not sheets or not sheets[0].systems:
         return None, None, {}
     sheet = sheets[0]
-    page = pymupdf.open(pdf_path)[sheet.number - 1]
-    zoom = sheet.width / page.rect.width
-    pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
-    img = Image.frombytes("L", (pix.width, pix.height), pix.samples)
+    images = []
+    for path in dict.fromkeys(p for p in pdf_paths if p):
+        page = pymupdf.open(path)[sheet.number - 1]
+        zoom = sheet.width / page.rect.width
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
+        images.append(Image.frombytes("L", (pix.width, pix.height), pix.samples))
     total: Dict[str, float] = {}
     n = 0
     for staff in sheet.systems[0].staves:
         win = header_window(staff)
         if win is None:
             continue
-        _, scores = detect_from_image(img, staff.top, staff.interline, *win)
-        if not scores:
+        best: Dict[str, float] = {}
+        for img in images:
+            _, scores = detect_from_image(img, staff.top, staff.interline, *win)
+            for k, v in scores.items():
+                best[k] = max(best.get(k, -1.0), v)
+        if not best:
             continue
         n += 1
-        for k, v in scores.items():
+        for k, v in best.items():
             total[k] = total.get(k, 0.0) + v
     if not n:
         return None, None, {}

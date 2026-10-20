@@ -127,6 +127,30 @@ def _project_sheets(omr_path: str) -> List[int]:
         return []
 
 
+def _drop_invalid_sheets(omr_path: str) -> bool:
+    """
+    Remove the sheets NoteLite flagged as invalid from a project, keeping at
+    least one. Returns True if something was removed.
+    """
+    with zipfile.ZipFile(omr_path) as z:
+        entries = {n: z.read(n) for n in z.namelist()}
+    book = entries.get("book.xml", b"").decode("utf-8")
+    bad = re.findall(r'<sheet number="(\d+)"[^>]*invalid="true"', book)
+    total = re.findall(r'<sheet number="(\d+)"', book)
+    if not bad or len(bad) >= len(total):
+        return False
+    for num in bad:
+        book = re.sub(rf'<sheet number="{num}"[^>]*invalid="true"[^>]*/>', "", book)
+        book = re.sub(rf'<sheet number="{num}"[^>]*invalid="true"[^>]*>.*?</sheet>', "", book, flags=re.S)
+        for n in [n for n in entries if n.startswith(f"sheet#{num}/")]:
+            del entries[n]
+    entries["book.xml"] = book.encode("utf-8")
+    with zipfile.ZipFile(omr_path, "w", zipfile.ZIP_STORED) as zw:
+        for n, data in entries.items():
+            zw.writestr(n, data)
+    return True
+
+
 def run_notelite_omr(
     pdf_path: str,
     output_path: Optional[str] = None,
@@ -222,6 +246,14 @@ def run_notelite_omr(
         out_files = list(Path(tmp_dir).glob("*.mxl")) + list(Path(tmp_dir).glob("*.xml"))
         # Filter out sheet XMLs or book.xml
         score_files = [f for f in out_files if not f.name.endswith(".omr") and f.name != "book.xml"]
+
+        if not score_files and not is_project:
+            # A page without a recognisable system (e.g. a nearly empty last page)
+            # makes the whole export fail: drop the invalid sheets and export the rest
+            books = list(Path(tmp_dir).glob("*.omr"))
+            if books and _drop_invalid_sheets(str(books[0])):
+                return run_notelite_omr(str(books[0]), output_path=output_path, timeout_sec=timeout_sec,
+                                        keep_book=keep_book)
 
         if not score_files:
             error_log = proc.stderr or proc.stdout
