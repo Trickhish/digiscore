@@ -14,7 +14,9 @@ from lxml import etree
 
 
 DEFAULT_API_BASE = "https://ai.dury.dev/v1"
-DEFAULT_MODEL = "antigravity/gemini-3-flash"
+DEFAULT_MODEL = os.environ.get("DIGISCORE_AI_MODEL", "opllm/combos/vision-top")
+# Tried in order when the current model is out of quota or unavailable
+FALLBACK_MODELS = ["antigravity/gemini-3-flash"]
 MUSICXML_DOCTYPE = (
     '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" '
     '"http://www.musicxml.org/dtds/partwise.dtd">'
@@ -75,19 +77,27 @@ class VisionClient:
         # The endpoint rate-limits and is sometimes unavailable: retry with backoff
         import time
 
-        if getattr(self, "_exhausted", False):
+        exhausted = getattr(self, "_exhausted", set())
+        self._exhausted = exhausted
+        models = [m for m in [self.model] + FALLBACK_MODELS if m not in exhausted]
+        if not models:
             raise RuntimeError("AI quota exhausted for this run")
-        delay = 4.0
-        for attempt in range(4):
-            resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
-            if resp.status_code == 429 and "quota" in resp.text.lower():
-                self._exhausted = True
+        resp = None
+        for model in dict.fromkeys(models):
+            payload["model"] = model
+            delay = 4.0
+            for attempt in range(4):
+                resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
+                if resp.status_code in (404, 429) and (resp.status_code == 404 or "quota" in resp.text.lower()):
+                    exhausted.add(model)
+                    break
+                if resp.status_code in (429, 500, 502, 503, 504) and attempt < 3:
+                    time.sleep(delay)
+                    delay *= 2.5
+                    continue
                 break
-            if resp.status_code in (429, 500, 502, 503, 504) and attempt < 3:
-                time.sleep(delay)
-                delay *= 2.5
-                continue
-            break
+            if resp.ok:
+                break
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"]

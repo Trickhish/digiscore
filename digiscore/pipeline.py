@@ -91,6 +91,17 @@ def read_musicxml_from_file(file_path: str) -> str:
         return p.read_text(encoding="utf-8")
 
 
+def _same_bar_length(a: str, b: str) -> bool:
+    """'2/2' and '4/4' both last four quarter notes."""
+    from fractions import Fraction
+
+    try:
+        (na, da), (nb, db) = (map(int, s.split("/")) for s in (a, b))
+    except ValueError:
+        return False
+    return Fraction(na, da) == Fraction(nb, db)
+
+
 def convert_score(
     input_path: str,
     output_path: Optional[str] = None,
@@ -157,8 +168,11 @@ def convert_score(
                         vc = VisionClient(timeout=90)
                         if vc.is_available:
                             ts = detect_time_signature(abs_input, vc)
-                    if not ts:
-                        ts = guess_time_from_durations(xml_content)
+                    # Vision models misread time signatures now and then: keep the AI
+                    # answer only if its bar length matches what most bars already fill
+                    guess = guess_time_from_durations(xml_content)
+                    if guess and (not ts or not _same_bar_length(ts, guess)):
+                        ts = guess
                     if ts:
                         print(f"[*] Time signature missing in OMR output; using {ts}")
                     if ts and inject_time_into_omr(tmp_book, ts):
