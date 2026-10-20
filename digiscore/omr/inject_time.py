@@ -166,3 +166,60 @@ def inject_time_into_omr(omr_path: str, time_sig: str) -> bool:
     else:
         z.close()
     return changed
+
+
+def apply_time_signature(xml_content: str, time_sig: str, symbol: str | None = None) -> str:
+    """
+    Write the time signature read from the image into the first measure of every
+    part, replacing the engine's when it has the same bar length (4/4 vs 2/2,
+    3/4 vs 6/8) or adding it when there is none and most bars fill it. A
+    different bar length means one of the two readings is wrong: the engine's
+    stays, since its rhythm was built on it.
+    """
+    from fractions import Fraction
+
+    beats, beat_type = (int(x) for x in time_sig.split("/"))
+    want = Fraction(beats, beat_type)
+    root = etree.fromstring(xml_content.encode("utf-8"))
+    changed = False
+    for part in root.findall("part"):
+        m = part.find("measure")
+        if m is None:
+            continue
+        attrs = m.find("attributes")
+        cur = attrs.find("time") if attrs is not None else None
+        if cur is not None:
+            try:
+                have = Fraction(int(cur.findtext("beats")), int(cur.findtext("beat-type")))
+            except (TypeError, ValueError):
+                continue
+            if have != want:
+                continue
+        else:
+            guess = guess_time_from_durations(xml_content)
+            if not guess or Fraction(*map(int, guess.split("/"))) != want:
+                continue
+            if attrs is None:
+                attrs = etree.Element("attributes")
+                m.insert(0, attrs)
+                etree.SubElement(attrs, "divisions").text = "1"
+            cur = etree.Element("time")
+            # <time> goes after <divisions> and <key>
+            anchor = attrs.find("key") if attrs.find("key") is not None else attrs.find("divisions")
+            if anchor is not None:
+                anchor.addnext(cur)
+            else:
+                attrs.insert(0, cur)
+        for c in list(cur):
+            cur.remove(c)
+        etree.SubElement(cur, "beats").text = str(beats)
+        etree.SubElement(cur, "beat-type").text = str(beat_type)
+        if symbol in ("common", "cut"):
+            cur.set("symbol", symbol)
+        elif "symbol" in cur.attrib:
+            del cur.attrib["symbol"]
+        changed = True
+    if not changed:
+        return xml_content
+    return etree.tostring(root.getroottree(), pretty_print=True, xml_declaration=True,
+                          encoding="UTF-8").decode("utf-8")

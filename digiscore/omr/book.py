@@ -57,6 +57,13 @@ class StaffInSystem:
     interline: float = 20.0
     measures: List[StaffMeasure] = field(default_factory=list)
     lyric_lines: List[LyricLine] = field(default_factory=list)
+    left: float = 0.0
+    # Staff header: x range, and the boxes (x0, x1, y0, y1) of what the engine found in it
+    header_start: float = 0.0
+    header_stop: float = 0.0
+    clef_box: Optional[Tuple[float, float, float, float]] = None
+    key_box: Optional[Tuple[float, float, float, float]] = None
+    time_box: Optional[Tuple[float, float, float, float]] = None
 
 
 @dataclass
@@ -135,6 +142,15 @@ def read_book(omr_path: str) -> List[SheetInfo]:
                 ys = [float(pt.get("y")) for pt in staff_elem.iter("point")]
                 if ys:
                     staff.top, staff.bottom = min(ys), max(ys)
+                staff.left = float(staff_elem.get("left", 0))
+                header = staff_elem.find("header")
+                if header is not None:
+                    staff.header_start = float(header.get("start", staff.left))
+                    staff.header_stop = float(header.get("stop", staff.left))
+                    for tag, attr in (("clef", "clef_box"), ("key", "key_box"), ("time", "time_box")):
+                        ref = header.findtext(tag)
+                        if ref and ref in inters:
+                            setattr(staff, attr, _bounds(inters[ref]))
 
                 for meas in part.findall("measure"):
                     pos = stack_pos.get(meas.get("id"))

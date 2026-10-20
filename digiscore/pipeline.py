@@ -164,15 +164,26 @@ def convert_score(
             run_notelite_omr(omr_input, output_path=tmp_mxl, sheets=sheets, keep_book=tmp_book)
             xml_content = read_musicxml_from_file(tmp_mxl)
 
-            # If the OMR missed the time signature, ask the AI (or infer it from the
-            # bar lengths), write it into the project and let NoteLite redo the rhythm
+            # Read the time signature from the image ourselves: the OMR engine misses
+            # it on many scans and cannot tell a cut-time C from a common-time C
+            image_ts, image_symbol = None, None
+            if os.path.isfile(tmp_book):
+                try:
+                    from digiscore.omr.timesig import detect_time_signature_in_book
+                    image_ts, image_symbol, _ = detect_time_signature_in_book(read_book(tmp_book), omr_input)
+                except Exception as e:
+                    warnings.warn(f"Time signature reading skipped: {e}")
+
+            # If the OMR missed the time signature, use ours (or ask the AI, or infer
+            # it from the bar lengths), write it into the project and let NoteLite
+            # redo the rhythm
             if os.path.isfile(tmp_book) and "<time>" not in xml_content:
                 try:
                     from digiscore.omr.inject_time import (
                         detect_time_signature, guess_time_from_durations, inject_time_into_omr,
                     )
-                    ts = None
-                    if use_ai:
+                    ts = image_ts
+                    if ts is None and use_ai:
                         vc = VisionClient(timeout=90)
                         if vc.is_available:
                             ts = detect_time_signature(abs_input, vc)
@@ -189,6 +200,9 @@ def convert_score(
                         xml_content = read_musicxml_from_file(tmp_mxl)
                 except Exception as e:
                     warnings.warn(f"Time signature injection skipped: {e}")
+            if image_ts:
+                from digiscore.omr.inject_time import apply_time_signature
+                xml_content = apply_time_signature(xml_content, image_ts, image_symbol)
 
             book = None
             if os.path.isfile(tmp_book):
