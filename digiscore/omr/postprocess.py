@@ -73,6 +73,14 @@ def merge_split_parts(xml_content: str) -> str:
     # Unnamed parts: match by complementary measure usage, in order
     if not target_of:
         target_of = _match_by_usage(ids, parts)
+        # Keep the better-named part of each pair (a real name over a one-letter
+        # placeholder such as "V")
+        def quality(pid):
+            return len(_norm(names.get(pid, "")))
+        target_of = {
+            (d if quality(s) > quality(d) else s): (s if quality(s) > quality(d) else d)
+            for s, d in target_of.items()
+        }
 
     if not target_of:
         return xml_content

@@ -90,8 +90,126 @@ def guess_time_from_durations(xml_content: str) -> str | None:
     return table.get(length)
 
 
-def inject_time_into_omr(omr_path: str, time_sig: str) -> bool:
-    """Patch every staff header without a time with a time-pair inter. Returns True if patched."""
+def omr_time_signatures(omr_path: str) -> set:
+    """The time-rational values of the time signatures in the first system's headers."""
+    found = set()
+    with zipfile.ZipFile(omr_path) as z:
+        names = sorted((n for n in z.namelist() if re.fullmatch(r"sheet#\d+/sheet#\d+\.xml", n)),
+                       key=lambda n: int(re.search(r"#(\d+)/", n).group(1)))
+        if not names:
+            return found
+        root = etree.fromstring(z.read(names[0]))
+    sysm = next(root.iter("system"), None)
+    if sysm is None:
+        return found
+    inters = {e.get("id"): e for c in sysm.findall("sig/inters") for e in c}
+    for st in sysm.iter("staff"):
+        h = st.find("header")
+        ref = h.findtext("time") if h is not None else None
+        e = inters.get(ref) if ref else None
+        if e is not None and e.get("time-rational"):
+            found.add(e.get("time-rational"))
+    return found
+
+
+def _inside(b, outer) -> bool:
+    if b is None or outer is None:
+        return False
+    x, y, w, h = (float(b.get(k)) for k in ("x", "y", "w", "h"))
+    X, Y, W, H = (float(outer.get(k)) for k in ("x", "y", "w", "h"))
+    return X - 2 <= x and Y - 2 <= y and x + w <= X + W + 2 and y + h <= Y + H + 2
+
+
+def replace_header_times(omr_path: str, time_sig: str, spans: dict | None = None) -> bool:
+    """
+    Remove the header time signatures (and their references) from every staff,
+    then inject time_sig: used when the engine misread the signature.
+    """
+    with zipfile.ZipFile(omr_path) as z:
+        entries = {n: z.read(n) for n in z.namelist()}
+    for name in [n for n in entries if re.fullmatch(r"sheet#\d+/sheet#\d+\.xml", n)]:
+        root = etree.fromstring(entries[name])
+        for sysm in root.iter("system"):
+            gone = set()
+            for st in sysm.iter("staff"):
+                h = st.find("header")
+                t = h.find("time") if h is not None else None
+                if t is not None:
+                    gone.add(t.text)
+                    h.remove(t)
+            if not gone:
+                continue
+            for c in sysm.findall("sig/inters"):
+                # The pair's digits (time-number) are separate inters of the same box
+                boxes = [e.find("bounds") for e in c if e.get("id") in gone and e.find("bounds") is not None]
+                for e in list(c):
+                    if e.get("id") in gone:
+                        c.remove(e)
+                    elif e.tag == "time-number" and any(_inside(e.find("bounds"), b) for b in boxes):
+                        gone.add(e.get("id"))
+                        c.remove(e)
+            for e in list(sysm.iter("times")):
+                if e.text in gone:
+                    e.getparent().remove(e)
+            # Relations pointing at removed inters
+            for rel in list(sysm.iter("relation")):
+                if rel.get("source") in gone or rel.get("target") in gone:
+                    rel.getparent().remove(rel)
+        entries[name] = etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+    with zipfile.ZipFile(omr_path, "w", zipfile.ZIP_STORED) as zw:
+        for n, data in entries.items():
+            zw.writestr(n, data)
+    return inject_time_into_omr(omr_path, time_sig, spans)
+
+
+def _drop_chords_in_spans(sysm, spans: dict) -> None:
+    """Remove head-chords (and their heads and stems) lying inside a signature's span."""
+    inters = {e.get("id"): e for c in sysm.findall("sig/inters") for e in c}
+    gone = set()
+    for e in inters.values():
+        if e.tag != "head-chord":
+            continue
+        span = spans.get(e.get("staff"))
+        b = e.find("bounds")
+        if span is None or b is None:
+            continue
+        x, w = float(b.get("x")), float(b.get("w"))
+        if span[0] - 5 <= x and x + w <= span[1] + 10:
+            gone.add(e.get("id"))
+    if not gone:
+        return
+    # Members of the chords: heads and stems in the same span
+    for e in inters.values():
+        if e.tag in ("head", "stem"):
+            b = e.find("bounds")
+            span = spans.get(e.get("staff"))
+            if b is not None and span and span[0] - 5 <= float(b.get("x")) and \
+                    float(b.get("x")) + float(b.get("w")) <= span[1] + 10:
+                gone.add(e.get("id"))
+    for c in sysm.findall("sig/inters"):
+        for e in list(c):
+            if e.get("id") in gone:
+                c.remove(e)
+    for rel in list(sysm.iter("relation")):
+        if rel.get("source") in gone or rel.get("target") in gone:
+            rel.getparent().remove(rel)
+    for tag in ("head-chords", "stems"):
+        for e in sysm.iter(tag):
+            ids = [i for i in (e.text or "").split() if i not in gone]
+            e.text = " ".join(ids)
+    # Voice slots that pointed at a removed chord
+    for entry in list(sysm.iter("entry")):
+        v = entry.find("value")
+        if v is not None and v.get("chord") in gone:
+            entry.getparent().remove(entry)
+
+
+def inject_time_into_omr(omr_path: str, time_sig: str, spans: dict | None = None) -> bool:
+    """
+    Patch every staff header without a time with a time-pair inter. Returns True if patched.
+    spans: {staff id: (x0, x1)} of the signature on the first sheet's first
+    system; chords the engine built from its digits there are removed.
+    """
     z = zipfile.ZipFile(omr_path, "r")
     names = sorted(n for n in z.namelist() if re.fullmatch(r"sheet#\d+/sheet#\d+\.xml", n))
     book_xml = z.read("book.xml")
@@ -104,13 +222,16 @@ def inject_time_into_omr(omr_path: str, time_sig: str) -> bool:
     for name in z.namelist():
         out_entries[name] = z.read(name)
 
+    first_sheet = min(names, key=lambda n: int(re.search(r"#(\d+)/", n).group(1)))
     for name in names:
         root = etree.fromstring(out_entries[name])
         nid = int(root.get("last-persistent-id"))
-        for sysm in root.iter("system"):
+        for s_idx, sysm in enumerate(root.iter("system")):
             inters = sysm.find("sig/inters")
             if inters is None:
                 continue
+            if spans and name == first_sheet and s_idx == 0:
+                _drop_chords_in_spans(sysm, spans)
             for part in sysm.findall("part"):
                 for st in part.findall("staff"):
                     h = st.find("header")
@@ -120,6 +241,8 @@ def inject_time_into_omr(omr_path: str, time_sig: str) -> bool:
                     if not ys:
                         continue
                     stop = int(h.get("stop"))
+                    span = spans.get(st.get("id")) if spans and name == first_sheet and s_idx == 0 else None
+                    x_at, w_at = (int(span[0]), int(span[1] - span[0])) if span else (stop + 5, 40)
                     nid += 1
                     e = etree.SubElement(
                         inters, "time-pair",
@@ -128,12 +251,12 @@ def inject_time_into_omr(omr_path: str, time_sig: str) -> bool:
                         staff=st.get("id"), id=str(nid),
                     )
                     e.set("ctx-grade", "0.9")
-                    etree.SubElement(e, "bounds", x=str(stop + 5),
-                                     y=str(int(min(ys))), w="40",
+                    etree.SubElement(e, "bounds", x=str(x_at),
+                                     y=str(int(min(ys))), w=str(w_at),
                                      h=str(int(max(ys) - min(ys))))
                     te = etree.SubElement(h, "time")
                     te.text = str(nid)
-                    h.set("stop", str(stop + 50))
+                    h.set("stop", str(max(stop, x_at + w_at) + 10))
                     m = part.find("measure")
                     if m is not None:
                         tm = etree.Element("times")

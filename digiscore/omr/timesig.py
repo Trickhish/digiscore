@@ -121,9 +121,33 @@ def classify_gray(gray: np.ndarray, interline: float, top_line_y: float) -> Dict
     return out
 
 
+def _local_staff_top(img: Image.Image, staff_top: float, interline: float, x0: float, x1: float) -> float:
+    """
+    The staff's top line at this x range: on a slightly rotated scan the line's
+    height drifts along the page. Fit five evenly spaced lines to the row
+    darkness profile within one space of the given top.
+    """
+    y0 = int(staff_top - 1.5 * interline)
+    y1 = int(staff_top + 5.5 * interline)
+    a = 255.0 - np.asarray(img.crop((int(x0), max(0, y0), int(x1), y1)).convert("L"), dtype=np.float32)
+    if a.size == 0:
+        return staff_top
+    prof = a.mean(axis=1)
+    best, best_t = -1.0, staff_top
+    for t in np.arange(-1.0 * interline, 1.0 * interline + 0.5, 0.5):
+        rows = [int(round(staff_top + t + k * interline)) - max(0, y0) for k in range(5)]
+        if min(rows) < 0 or max(rows) >= len(prof):
+            continue
+        v = sum(prof[r] for r in rows)
+        if v > best:
+            best, best_t = v, staff_top + t
+    return float(best_t)
+
+
 def detect_from_image(img: Image.Image, staff_top: float, interline: float, x0: float, x1: float
                       ) -> Tuple[Optional[str], Dict[str, float]]:
     """Best candidate for the staff whose top line is at staff_top, between x0 and x1 (pixels)."""
+    staff_top = _local_staff_top(img, staff_top, interline, x0, x1)
     y0 = int(staff_top - 2 * interline)
     y1 = int(staff_top + 6 * interline)
     crop = img.crop((int(x0), max(0, y0), int(x1), y1)).convert("L")
@@ -136,7 +160,18 @@ def detect_from_image(img: Image.Image, staff_top: float, interline: float, x0: 
     scores = {k: v[0] for k, v in res.items()}
     if not scores:
         return None, {}
-    return max(scores, key=scores.get), scores
+    best = max(scores, key=scores.get)
+    detect_from_image.last_span = _span(best, res[best][1], interline, x0)
+    return best, scores
+
+
+def _span(cand: str, x_in_crop: float, interline: float, x0: float) -> Tuple[float, float]:
+    """Page x range covered by the matched template."""
+    il = max(6, int(round(interline)))
+    t = _staff_template(cand, il, FONTS[0], 0.08 * il)
+    w = (t.shape[1] if t is not None else 2 * il) * interline / il
+    margin = il // 3 * interline / il
+    return x0 + x_in_crop + margin, x0 + x_in_crop + w - margin
 
 
 def to_rational(label: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
@@ -152,13 +187,20 @@ def header_window(staff) -> Optional[Tuple[float, float]]:
     """x range to search on a staff of the .omr book: after the clef, up to the first note."""
     il = staff.interline
     start = staff.clef_box[1] if staff.clef_box else staff.header_start + 2.5 * il
-    end = start + 9 * il
-    firsts = [c.x0 for m in staff.measures[:1] for c in m.chords]
+    key_end = staff.key_box[1] if staff.key_box else start
+    end = max(start, key_end) + 6 * il
+    # The engine sometimes takes time-signature digits for a chord: only a chord
+    # leaving room for a signature after the key bounds the search
+    firsts = [c.x0 for m in staff.measures[:1] for c in m.chords if c.x0 > key_end + 3.5 * il]
     if firsts:
         end = min(end, min(firsts) - 0.1 * il)
     if end - start < 2 * il:
         return None
     return start, end
+
+
+# staff id -> page x range of the time signature found by the last detection
+spans: Dict[str, Tuple[float, float]] = {}
 
 
 def detect_time_signature_in_book(sheets: List, *pdf_paths: str
@@ -182,15 +224,20 @@ def detect_time_signature_in_book(sheets: List, *pdf_paths: str
         images.append(Image.frombytes("L", (pix.width, pix.height), pix.samples))
     total: Dict[str, float] = {}
     n = 0
+    spans.clear()
     for staff in sheet.systems[0].staves:
         win = header_window(staff)
         if win is None:
             continue
         best: Dict[str, float] = {}
+        top_label, top_score = None, -1.0
         for img in images:
-            _, scores = detect_from_image(img, staff.top, staff.interline, *win)
+            label, scores = detect_from_image(img, staff.top, staff.interline, *win)
             for k, v in scores.items():
                 best[k] = max(best.get(k, -1.0), v)
+            if label and scores[label] > top_score:
+                top_label, top_score = label, scores[label]
+                spans[staff.staff_id] = detect_from_image.last_span
         if not best:
             continue
         n += 1

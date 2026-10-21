@@ -166,18 +166,34 @@ def convert_score(
 
             # Read the time signature from the image ourselves: the OMR engine misses
             # it on many scans and cannot tell a cut-time C from a common-time C
-            image_ts, image_symbol = None, None
+            image_ts, image_symbol, image_spans = None, None, None
             if os.path.isfile(tmp_book):
                 try:
-                    from digiscore.omr.timesig import detect_time_signature_in_book
-                    image_ts, image_symbol, _ = detect_time_signature_in_book(read_book(tmp_book), abs_input, omr_input)
+                    from digiscore.omr import timesig
+                    image_ts, image_symbol, _ = timesig.detect_time_signature_in_book(
+                        read_book(tmp_book), abs_input, omr_input)
+                    image_spans = dict(timesig.spans) if image_ts else None
                 except Exception as e:
                     warnings.warn(f"Time signature reading skipped: {e}")
+
+            # The engine read a different meter (6/8 for 9/8, 6/4 for 12/8...): its
+            # rhythm is built on the wrong bar length, so redo it with ours
+            if image_ts and os.path.isfile(tmp_book) and "<time" in xml_content:
+                try:
+                    from digiscore.omr.inject_time import omr_time_signatures, replace_header_times
+                    found = omr_time_signatures(tmp_book)
+                    if found and not any(_same_bar_length(image_ts, t) for t in found):
+                        print(f"[*] OMR read time signature {sorted(found)}, image shows {image_ts}; redoing rhythm")
+                        if replace_header_times(tmp_book, image_ts, image_spans):
+                            run_notelite_omr(tmp_book, output_path=tmp_mxl, keep_book=tmp_book)
+                            xml_content = read_musicxml_from_file(tmp_mxl)
+                except Exception as e:
+                    warnings.warn(f"Time signature correction skipped: {e}")
 
             # If the OMR missed the time signature, use ours (or ask the AI, or infer
             # it from the bar lengths), write it into the project and let NoteLite
             # redo the rhythm
-            if os.path.isfile(tmp_book) and "<time>" not in xml_content:
+            if os.path.isfile(tmp_book) and "<time" not in xml_content:
                 try:
                     from digiscore.omr.inject_time import (
                         detect_time_signature, guess_time_from_durations, inject_time_into_omr,
@@ -194,7 +210,7 @@ def convert_score(
                         ts = guess
                     if ts:
                         print(f"[*] Time signature missing in OMR output; using {ts}")
-                    if ts and inject_time_into_omr(tmp_book, ts):
+                    if ts and inject_time_into_omr(tmp_book, ts, image_spans if ts == image_ts else None):
                         # The project only holds the selected sheets: no -sheets here
                         run_notelite_omr(tmp_book, output_path=tmp_mxl, keep_book=tmp_book)
                         xml_content = read_musicxml_from_file(tmp_mxl)
