@@ -22,7 +22,8 @@ PAIRS = [
     "examples/source_and_pdf/resurrexit-tanguy-dionis-du-sejour",
 ]
 VECTOR_PDFS = [
-    f for f in sorted(glob.glob("examples/*/*.pdf")) if "Ding dong" not in f
+    f for d in ("source_and_pdf", "just_pdf", "synthetic")
+    for f in sorted(glob.glob(f"examples/{d}/*.pdf")) if "Ding dong" not in f
 ]
 
 
@@ -130,3 +131,25 @@ def test_synthetic_vector_exact(pdf, tmp_path):
     a, b = r["ties"].split(" ")[0].split("/")
     assert r["notes"] == 1.0 and r["time"] == "ok" and a == b and "+" not in r["ties"], r
     assert r["lyrics"] in (None, 1.0), r
+
+
+# Real CPDL editions the vector path already reads (nearly) exactly: guard them
+CPDL_GOOD = {
+    "Ad_te": 1.0, "D-Ju_MS_33_Ab_Hoc_Familia": 1.0, "Vierendeels-ad_coenam": 1.0,
+    "Nh_Aiblinger_VP_01_Dixit": 1.0, "Nh_Reichard_Abends": 1.0, "Selig_sind_die_Toten": 0.99,
+    "Ad_te_levavi_Balbi": 0.98, "Nh_SchumannCL_Abendfeier": 0.98, "Nh_Heim_Ade_zur_guten_Nacht": 0.98,
+    "Abisso_e_fuoco_della_tua_carità": 0.96, "Ave_VerumSATB": 0.96, "Nh_Andre_Abendlied": 0.95,
+}
+
+
+@pytest.mark.parametrize("stem", sorted(CPDL_GOOD))
+def test_cpdl_vector_notes(stem, tmp_path):
+    import sys
+    sys.path.insert(0, "tools")
+    from bench_synthetic import compare
+    pdf = f"examples/cpdl/{stem}.pdf"
+    out = str(tmp_path / "out.musicxml")
+    convert_score(pdf, out, engine="vector", use_ai=False)
+    r = compare(out, pdf[:-4] + ".mxl")
+    assert r["notes"] >= CPDL_GOOD[stem], r
+    assert r["valid"] in (None, True), r

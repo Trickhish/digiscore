@@ -1,0 +1,4788 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise>
+
+  <work>
+    <work-title>A UNA PROFESIÓN</work-title>
+  </work>
+
+  <identification>
+    <creator type="composer">Gaspar F[ernande]s</creator>
+    <encoding>
+      <software>Mozart 16.1.2.0</software>
+      <supports attribute="new-system" element="print" type="yes" value="yes"/>
+      <supports attribute="new-page" element="print" type="yes" value="yes"/>
+    </encoding>
+  </identification>
+
+  <defaults>
+    <scaling>
+      <millimeters>60</millimeters>
+      <tenths>400</tenths>
+    </scaling>
+    <page-layout>
+      <page-height>1890</page-height>
+      <page-width>1308</page-width>
+      <page-margins type="odd">
+        <left-margin>98</left-margin>
+        <right-margin>98</right-margin>
+        <top-margin>0</top-margin>
+        <bottom-margin>0</bottom-margin>
+      </page-margins>
+      <page-margins type="even">
+        <left-margin>98</left-margin>
+        <right-margin>98</right-margin>
+        <top-margin>0</top-margin>
+        <bottom-margin>0</bottom-margin>
+      </page-margins>
+    </page-layout>
+    <system-layout>
+      <system-margins>
+        <left-margin>0</left-margin>
+        <right-margin>0</right-margin>
+      </system-margins>
+      <system-distance>138</system-distance>
+      <top-system-distance>78</top-system-distance>
+    </system-layout>
+  </defaults>
+
+  <credit page="1">
+    <credit-words default-x="648" default-y="1732" font-size="21.8" halign="center" justify="left" valign="bottom">A UNA PROFESIÓN</credit-words>
+  </credit>
+
+  <credit page="1">
+    <credit-words default-x="648" default-y="1677" font-size="11.9" halign="center" justify="left" valign="bottom">[Gaspar Fernandes]</credit-words>
+  </credit>
+
+  <part-list>
+    <score-part id="P1">
+      <part-name>Part_1</part-name>
+      <part-name-display print-object="no"/>
+      <score-instrument id="I1-20e0-0-80">
+        <instrument-name>Soprano</instrument-name>
+        <instrument-abbreviation>Sop.</instrument-abbreviation>
+      </score-instrument>
+      <midi-instrument id="I1-20e0-0-80">
+        <midi-channel>1</midi-channel>
+        <midi-program>129</midi-program>
+        <volume>100</volume>
+      </midi-instrument>
+    </score-part>
+    <score-part id="P2">
+      <part-name>Part_2</part-name>
+      <part-name-display print-object="no"/>
+      <score-instrument id="I2-20a0-0-80">
+        <instrument-name>Contralto</instrument-name>
+        <instrument-abbreviation>Alto</instrument-abbreviation>
+      </score-instrument>
+      <midi-instrument id="I2-20a0-0-80">
+        <midi-channel>1</midi-channel>
+        <midi-program>129</midi-program>
+        <volume>100</volume>
+      </midi-instrument>
+    </score-part>
+    <score-part id="P3">
+      <part-name>Part_3</part-name>
+      <part-name-display print-object="no"/>
+      <score-instrument id="I3-2040-d12-80">
+        <instrument-name>Ténor</instrument-name>
+        <instrument-abbreviation>Ten.</instrument-abbreviation>
+      </score-instrument>
+      <midi-instrument id="I3-2040-d12-80">
+        <midi-channel>1</midi-channel>
+        <midi-program>129</midi-program>
+        <volume>100</volume>
+      </midi-instrument>
+    </score-part>
+    <score-part id="P4">
+      <part-name>Basse</part-name>
+      <part-name-display print-object="no"/>
+      <part-abbreviation>Bs.</part-abbreviation>
+      <part-abbreviation-display print-object="no"/>
+      <score-instrument id="I4-2000-0-49">
+        <instrument-name>Basse</instrument-name>
+        <instrument-abbreviation>Bs.</instrument-abbreviation>
+      </score-instrument>
+      <midi-instrument id="I4-2000-0-49">
+        <midi-channel>2</midi-channel>
+        <midi-program>74</midi-program>
+        <volume>100</volume>
+      </midi-instrument>
+    </score-part>
+  </part-list>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+  <part id="P1">
+    <measure number="1">
+      <print>
+        <system-layout>
+          <system-margins>
+            <left-margin>0</left-margin>
+            <right-margin>0</right-margin>
+          </system-margins>
+          <top-system-distance>258</top-system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <attributes>
+        <divisions>1</divisions>
+        <key>
+          <fifths>-1</fifths>
+          <mode>major</mode>
+        </key>
+        <time>
+          <beats>3</beats>
+          <beat-type>2</beat-type>
+        </time>
+        <staves>1</staves>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
+      </attributes>
+      <sound tempo="216.000000"/>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <direction placement="above">
+        <direction-type>
+          <words default-y="13" font-family="Cambria, serif" font-size="0.0" font-style="italic" font-weight="normal">[Tiple]</words>
+        </direction-type>
+      </direction>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="2">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="3">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="4">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="5">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="6">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="7">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="8">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="9">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="10">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right">
+        <bar-style>light-light</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="11">
+      <barline location="left">
+        <segno/>
+      </barline>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="12">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="13">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="14">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="15">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="16">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="17">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="18">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="19">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="20">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="21">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="22">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="23">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="24">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="25">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="26">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="27">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="28">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="29">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="30">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="31">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="32">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="33">
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="34">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="35">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="36">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="37">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="38">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+        <notations>
+          <fermata type="upright"/>
+        </notations>
+      </note>
+      <direction>
+        <sound fine="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="39">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="40">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="41">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="42">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>28</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="43">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="44">
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="45">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="46">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="47">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="48">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <direction>
+        <sound dalsegno="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+  </part>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+  <part id="P2">
+    <measure number="1">
+      <print>
+        <system-layout>
+          <system-margins>
+            <left-margin>0</left-margin>
+            <right-margin>0</right-margin>
+          </system-margins>
+          <top-system-distance>258</top-system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <attributes>
+        <divisions>1</divisions>
+        <key>
+          <fifths>-1</fifths>
+          <mode>major</mode>
+        </key>
+        <time>
+          <beats>3</beats>
+          <beat-type>2</beat-type>
+        </time>
+        <staves>1</staves>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
+      </attributes>
+      <sound tempo="216.000000"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <direction placement="above">
+        <direction-type>
+          <words default-y="13" font-family="Cambria, serif" font-size="0.0" font-style="italic" font-weight="normal">[Alto]</words>
+        </direction-type>
+      </direction>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="2">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="3">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="4">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="5">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="6">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="7">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="8">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="9">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="10">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right">
+        <bar-style>light-light</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="11">
+      <barline location="left">
+        <segno/>
+      </barline>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="12">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="13">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="14">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="15">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="16">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="17">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="18">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="19">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="under" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="20">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="21">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="22">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="23">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="24">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="under" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="25">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="26">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>3</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <dot/>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="27">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="28">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="29">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="under" type="start"/>
+        </notations>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="30">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="31">
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="32">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="33">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="34">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="35">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="36">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="37">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="38">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+        <notations>
+          <fermata type="upright"/>
+        </notations>
+      </note>
+      <direction>
+        <sound fine="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="39">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="40">
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="under" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="41">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="42">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>73</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="under" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="43">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="44">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="45">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="46">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="47">
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="48">
+      <note>
+        <rest>
+          <display-step>D</display-step>
+          <display-octave>5</display-octave>
+        </rest>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <direction>
+        <sound dalsegno="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+  </part>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+  <part id="P3">
+    <measure number="1">
+      <print>
+        <system-layout>
+          <system-margins>
+            <left-margin>0</left-margin>
+            <right-margin>0</right-margin>
+          </system-margins>
+          <top-system-distance>258</top-system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <attributes>
+        <divisions>1</divisions>
+        <key>
+          <fifths>-1</fifths>
+          <mode>major</mode>
+        </key>
+        <time>
+          <beats>3</beats>
+          <beat-type>2</beat-type>
+        </time>
+        <staves>1</staves>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
+        <transpose>
+          <diatonic>0</diatonic>
+          <chromatic>0</chromatic>
+          <octave-change>-1</octave-change>
+        </transpose>
+      </attributes>
+      <sound tempo="216.000000"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <direction placement="above">
+        <direction-type>
+          <words default-y="10" font-family="Cambria, serif" font-size="0.0" font-style="italic" font-weight="normal">[Tenor]</words>
+        </direction-type>
+      </direction>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="2">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="3">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="4">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="5">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="6">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="7">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="8">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="9">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="10">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right">
+        <bar-style>light-light</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="11">
+      <barline location="left">
+        <segno/>
+      </barline>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="12">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="13">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="14">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="15">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="16">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="17">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="18">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="19">
+      <note>
+        <rest>
+          <display-step>D</display-step>
+          <display-octave>5</display-octave>
+        </rest>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="20">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="21">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="22">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="23">
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="24">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="25">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="26">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="27">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="28">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="29">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="30">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="31">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="32">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="33">
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="34">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="35">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <alter>1</alter>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <accidental>sharp</accidental>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="36">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>3</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <dot/>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="37">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="38">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+        <notations>
+          <fermata type="upright"/>
+        </notations>
+      </note>
+      <direction>
+        <sound fine="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="39">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="40">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="41">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="42">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>103</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="43">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="44">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="45">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="46">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="47">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="48">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>up</stem>
+        <notehead>normal</notehead>
+      </note>
+      <direction>
+        <sound dalsegno="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+  </part>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+  <part id="P4">
+    <measure number="1">
+      <print>
+        <system-layout>
+          <system-margins>
+            <left-margin>0</left-margin>
+            <right-margin>0</right-margin>
+          </system-margins>
+          <top-system-distance>258</top-system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <attributes>
+        <divisions>1</divisions>
+        <key>
+          <fifths>-1</fifths>
+          <mode>major</mode>
+        </key>
+        <time>
+          <beats>3</beats>
+          <beat-type>2</beat-type>
+        </time>
+        <staves>1</staves>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
+      </attributes>
+      <sound tempo="216.000000"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <direction placement="above">
+        <direction-type>
+          <words default-y="10" font-family="Cambria, serif" font-size="0.0" font-style="italic" font-weight="normal">[Bajo]</words>
+        </direction-type>
+      </direction>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="2">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="3">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="4">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="5">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="6">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="7">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="8">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="9">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="10">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right">
+        <bar-style>light-light</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="11">
+      <barline location="left">
+        <segno/>
+      </barline>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="12">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="13">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="14">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="15">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="16">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="17">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="18">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="19">
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="20">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="21">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="22">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="23">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="24">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="25">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>E</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="26">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="27">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="28">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="29">
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="30">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <rest/>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="31">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="32">
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="33">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="34">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="35">
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="36">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="37">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="38">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+        <notations>
+          <fermata type="upright"/>
+        </notations>
+      </note>
+      <direction>
+        <sound fine="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="39">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="40">
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="41">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <barline location="right"/>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="42">
+      <print new-system="yes">
+        <system-layout>
+          <system-distance>138</system-distance>
+        </system-layout>
+        <staff-layout number="1">
+          <staff-distance>88</staff-distance>
+        </staff-layout>
+      </print>
+      <barline location="left"/>
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="43">
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="44">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="45">
+      <note>
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" orientation="over" type="start"/>
+        </notations>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="46">
+      <note>
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+        <notations>
+          <tied number="1" type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+      <note>
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <stem>down</stem>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="47">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+    </measure>
+    <!-- ======================================= -->
+    <measure number="48">
+      <note>
+        <pitch>
+          <step>F</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <dot/>
+        <notehead>normal</notehead>
+      </note>
+      <direction>
+        <sound dalsegno="" tempo="120.000000"/>
+      </direction>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+  </part>
+
+</score-partwise>

@@ -83,4 +83,6 @@ with the MusicXML that MuseScore 4 rendered them from:
 python tools/make_synthetic.py --count 20          # needs MuseScore 4 (MSCORE=path) and xvfb-run
 python tools/bench_synthetic.py                    # vector path
 python tools/bench_synthetic.py --scan 130 --engine notelite   # same scores as 130 DPI fake scans
+python tools/bench_synthetic.py --dir examples/cpdl          # real choral scores from CPDL
+python tools/bench_synthetic.py --dir examples/musetrainer   # piano scores
 ```
