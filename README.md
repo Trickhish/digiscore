@@ -86,3 +86,15 @@ python tools/bench_synthetic.py --scan 130 --engine notelite   # same scores as 
 python tools/bench_synthetic.py --dir examples/cpdl          # real choral scores from CPDL
 python tools/bench_synthetic.py --dir examples/musetrainer   # piano scores
 ```
+
+Current results (mean share of notes right per score, worst part):
+
+| Set | Scores | Notes | Lyrics |
+|---|---|---|---|
+| `examples/synthetic` (vector) | 20 | 1.000 (20 perfect) | 1.000 |
+| `examples/source_and_pdf` | 3 | 1.000 | 1.000 |
+| `examples/cpdl` | 41 (40 readable) | 0.904 | 0.877 |
+| `examples/musetrainer` | 12 | 0.954 (7 perfect) | – |
+
+Vector PDFs from MuseScore 2–4, Sibelius, Finale, LilyPond, capella, Mozart
+and several printer drivers (renamed or Type3 music fonts) are read.
