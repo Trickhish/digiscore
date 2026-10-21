@@ -42,6 +42,17 @@ digiscore path/to/score.pdf -o output.mxl
 ```bash
 digiscore path/to/scanned_score.pdf -o output.musicxml --sheets 1
 ```
+Before recognition, pages are cleaned up as needed: low-resolution scans and
+reduced pages (small staves) are upscaled and binarised; photographed pages
+(grey, unevenly lit paper) have their lighting evened out and their bowed staff
+lines straightened. A page the engine cannot transcribe is left out with a
+warning instead of failing the whole score. After recognition, chord names
+(Sib, rém, LA4...) and stray page text read as lyrics are removed.
+
+`examples/scanned` holds real scans without reference transcriptions, for
+checking by eye: a 1949 Schirmer octavo (Handel, SATB + piano), a photocopied
+hymnal page with chord names, a phone photo of a psalm, and a 13-page divisi
+score at 150 DPI.
 
 ### Choir Mode (drop the accompaniment)
 ```bash

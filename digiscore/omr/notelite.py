@@ -136,12 +136,18 @@ def _drop_invalid_sheets(omr_path: str) -> bool:
         entries = {n: z.read(n) for n in z.namelist()}
     book = entries.get("book.xml", b"").decode("utf-8")
     bad = re.findall(r'<sheet number="(\d+)"[^>]*invalid="true"', book)
+    # A sheet whose transcription stopped early (an engine error in one step)
+    # blocks the whole export just the same
+    for m in re.finditer(r'<sheet number="(\d+)"[^>]*>(.*?)</sheet>', book, flags=re.S):
+        steps = re.search(r"<steps>([^<]*)</steps>", m.group(2))
+        if steps and "PAGE" not in steps.group(1).split() and m.group(1) not in bad:
+            bad.append(m.group(1))
     total = re.findall(r'<sheet number="(\d+)"', book)
     if not bad or len(bad) >= len(total):
         return False
     for num in bad:
-        book = re.sub(rf'<sheet number="{num}"[^>]*invalid="true"[^>]*/>', "", book)
-        book = re.sub(rf'<sheet number="{num}"[^>]*invalid="true"[^>]*>.*?</sheet>', "", book, flags=re.S)
+        book = re.sub(rf'<sheet number="{num}"[^>]*/>', "", book)
+        book = re.sub(rf'<sheet number="{num}"[^>]*>.*?</sheet>', "", book, flags=re.S)
         for n in [n for n in entries if n.startswith(f"sheet#{num}/")]:
             del entries[n]
     entries["book.xml"] = book.encode("utf-8")
@@ -149,6 +155,55 @@ def _drop_invalid_sheets(omr_path: str) -> bool:
         for n, data in entries.items():
             zw.writestr(n, data)
     return True
+
+
+def _failed_sheets(omr_path: str) -> List[str]:
+    """Sheets flagged invalid or whose transcription stopped before the last step."""
+    with zipfile.ZipFile(omr_path) as z:
+        book = z.read("book.xml").decode("utf-8")
+    bad = re.findall(r'<sheet number="(\d+)"[^>]*invalid="true"', book)
+    for m in re.finditer(r'<sheet number="(\d+)"[^>]*>(.*?)</sheet>', book, flags=re.S):
+        steps = re.search(r"<steps>([^<]*)</steps>", m.group(2))
+        if steps and "PAGE" not in steps.group(1).split() and m.group(1) not in bad:
+            bad.append(m.group(1))
+    return bad
+
+
+def _export_good_ranges(omr_path: str, out_dir: str, timeout_sec: int, env: dict) -> List[Path]:
+    """
+    Export a project whose full export failed because of some pages: the
+    working pages in contiguous ranges, each its own export.
+    """
+    bad = {int(x) for x in _failed_sheets(omr_path)}
+    sheets = _project_sheets(omr_path)
+    if not bad or len(bad) >= len(sheets):
+        return []
+    ranges, cur = [], []
+    for n in sheets:
+        if n in bad:
+            if cur:
+                ranges.append(cur)
+            cur = []
+        else:
+            cur.append(n)
+    if cur:
+        ranges.append(cur)
+    out: List[Path] = []
+    for k, r in enumerate(ranges):
+        sub = os.path.join(out_dir, f"range{k}")
+        os.makedirs(sub, exist_ok=True)
+        local = os.path.join(sub, os.path.basename(omr_path))
+        shutil.copy2(omr_path, local)
+        cmd = [find_notelite_binary(), "-batch", "-export", "-sheets", f"{r[0]}-{r[-1]}",
+               "-output", sub, "--", local]
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                       timeout=timeout_sec, env=env)
+        files = sorted(Path(sub).glob("*.mxl"), key=lambda f: f.name)
+        mv = [f for f in files if re.search(r"\.mvt\d+\.mxl$", f.name)]
+        if mv:
+            files = sorted(mv, key=lambda f: int(re.search(r"\.mvt(\d+)\.mxl$", f.name).group(1)))
+        out.extend(files)
+    return out
 
 
 def run_notelite_omr(
@@ -226,6 +281,10 @@ def run_notelite_omr(
                 # staff: its lines are far shorter than the page's other staves
                 "-constant", "com.notelite.omr.sheet.grid.ClustersRetriever.minClusterLengthRatio=0.1",
                 "-constant", "com.notelite.omr.sheet.grid.LinesRetriever.minStaffLength=5",
+                # An indented system is taken as a new movement, and a score cut in
+                # movements per page loses its parts' alignment; choir scores
+                # indent only their first system (and incipits), so keep one score
+                "-constant", "com.notelite.omr.sheet.ProcessingSwitches.indentations=false",
             ]
         if sheets:
             cmd.extend(["-sheets", str(sheets)])
@@ -251,13 +310,24 @@ def run_notelite_omr(
         # Filter out sheet XMLs or book.xml
         score_files = [f for f in out_files if not f.name.endswith(".omr") and f.name != "book.xml"]
 
+        ranged: List[Path] = []
         if not score_files and not is_project:
-            # A page without a recognisable system (e.g. a nearly empty last page)
-            # makes the whole export fail: drop the invalid sheets and export the rest
+            # A page without a recognisable system (a nearly empty last page), or
+            # one where the engine failed, makes the whole export fail
             books = list(Path(tmp_dir).glob("*.omr"))
-            if books and _drop_invalid_sheets(str(books[0])):
-                return run_notelite_omr(str(books[0]), output_path=output_path, timeout_sec=timeout_sec,
-                                        keep_book=keep_book)
+            failed = _failed_sheets(str(books[0])) if books else []
+            if failed:
+                import warnings
+                warnings.warn(f"NoteLite could not transcribe page(s) {', '.join(failed)}; "
+                              "they are left out of the score")
+                if all(int(x) == max(_project_sheets(str(books[0]))) for x in failed) or len(failed) == 1 and \
+                        _project_sheets(str(books[0]))[-1] == int(failed[0]):
+                    # Only the last page: drop it, the project stays coherent
+                    if _drop_invalid_sheets(str(books[0])):
+                        return run_notelite_omr(str(books[0]), output_path=output_path,
+                                                timeout_sec=timeout_sec, keep_book=keep_book)
+                ranged = _export_good_ranges(str(books[0]), tmp_dir, timeout_sec, env)
+                score_files = ranged
 
         if not score_files:
             error_log = proc.stderr or proc.stdout
@@ -272,6 +342,8 @@ def run_notelite_omr(
             (f for f in score_files if re.search(r"\.mvt\d+\.mxl$", f.name)),
             key=lambda f: int(re.search(r"\.mvt(\d+)\.mxl$", f.name).group(1)),
         )
+        if ranged:
+            mvts = ranged
         if len(mvts) > 1:
             joined = Path(tmp_dir) / "joined.mxl"
             with zipfile.ZipFile(joined, "w", zipfile.ZIP_DEFLATED) as zj:

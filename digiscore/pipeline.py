@@ -173,8 +173,11 @@ def convert_score(
             # Low-resolution scans: upscale and binarise before OMR
             omr_input = abs_input
             try:
-                from digiscore.omr.enhance import enhance_pdf, needs_enhancement
-                if needs_enhancement(abs_input):
+                from digiscore.omr.enhance import enhance_pdf, needs_enhancement, needs_flattening, flatten_pdf
+                if needs_flattening(abs_input):
+                    # Photographed pages: grey, unevenly lit paper
+                    omr_input = flatten_pdf(abs_input, os.path.join(tmp_dir, f"{input_stem}.pdf"))
+                elif needs_enhancement(abs_input):
                     omr_input = enhance_pdf(abs_input, os.path.join(tmp_dir, f"{input_stem}.pdf"))
             except Exception as e:
                 warnings.warn(f"Scan enhancement skipped: {e}")
@@ -293,8 +296,10 @@ def convert_score(
                 except Exception as e:
                     warnings.warn(f"Measure split skipped: {e}")
             xml_content = merge_split_parts(xml_content)
-            from digiscore.omr.postprocess import fix_measure_rests
-            xml_content = fix_measure_rests(xml_content)
+            from digiscore.omr.postprocess import (fix_measure_rests, drop_chord_symbol_lyrics, dedupe_ties,
+                                                   drop_prose_directions)
+            xml_content = drop_prose_directions(dedupe_ties(fix_measure_rests(xml_content)))
+            xml_content = drop_chord_symbol_lyrics(xml_content)
             if choir:
                 from digiscore.omr.choir import drop_accompaniment
                 xml_content = drop_accompaniment(xml_content)

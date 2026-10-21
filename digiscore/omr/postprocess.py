@@ -214,3 +214,151 @@ def fix_measure_rests(xml_content: str) -> str:
         return xml_content
     return etree.tostring(root.getroottree(), pretty_print=True, xml_declaration=True,
                           encoding="UTF-8").decode("utf-8")
+
+
+# Chord symbols in English, German and solfège names: C, F#m7, Bb/D, Sib, rém,
+# Solm, LA4, DO7...
+_CHORD = re.compile(
+    r"^(?:[A-H]|do|ré|re|mi|fa|sol|la|si)(?:[#♯b♭]|is|es|s)?"
+    r"(?:m|min|maj|M|dim|aug|sus|°|ø|\+)?\d{0,2}(?:/[A-H](?:[#♯b♭])?)?$",
+    re.I,
+)
+
+
+# Chord names no verse would hold: solfège in capitals (DO, LA4, SOL7), or with
+# a suffix (Sib, Solm, rém, Mi7)
+_SURE_CHORD = re.compile(
+    r"^(?:(?:DO|RÉ|RE|MI|FA|SOL|LA|SI)(?:[#b]|m)?\d{0,2}"
+    r"|(?:[Dd]o|[Rr][ée]|[Mm]i|[Ff]a|[Ss]ol|[Ll]a|[Ss]i)(?:[#b]m?|m)\d{0,2}"
+    r"|(?:Do|Ré|Re|Mi|Fa|Sol|La|Si)\d{1,2})$")
+
+
+def _is_chord_symbol(text: str) -> bool:
+    t = text.strip().rstrip(",.;")
+    return bool(t) and bool(_CHORD.match(t)) and not t.islower() or bool(
+        t and re.match(r"^(?:do|ré|re|mi|fa|sol|la|si)[#b]?m?\d?$", t) and t[0].isupper())
+
+
+def drop_chord_symbol_lyrics(xml_content: str) -> str:
+    """
+    Chord names printed above the music (Sib, rém, LA4, F#m...) are read as a
+    verse by the OMR: drop a lyric line whose syllables are mostly chord names,
+    chord names mixed into a verse, and sparse lines of stray page text.
+    """
+    try:
+        root = etree.fromstring(xml_content.encode("utf-8"))
+    except etree.XMLSyntaxError:
+        return xml_content
+    changed = False
+    for part in root.findall("part"):
+        by_line: Dict[str, List] = {}
+        for lyr in part.iter("lyric"):
+            by_line.setdefault(lyr.get("number", "1"), []).append(lyr)
+        for num, lyrs in by_line.items():
+            texts = [(l.findtext("text") or "").strip() for l in lyrs]
+            texts = [t for t in texts if t]
+            if not texts:
+                continue
+            chords = [l for l in lyrs if _is_chord_symbol(l.findtext("text") or "")]
+            # A whole line of chord names goes; elsewhere single chord names
+            # written in capitals (DO, LA4, Sib) mixed into a verse go too
+            if len(chords) >= 0.6 * len(texts):
+                drop = lyrs
+            else:
+                drop = [l for l in lyrs if _SURE_CHORD.match((l.findtext("text") or "").strip().rstrip(","))]
+            for l in drop:
+                l.getparent().remove(l)
+                changed = True
+    # Stray page text read as words: a verse line touching only a few of a
+    # part's notes, in a score where some part has a real verse
+    coverage = {}
+    for part in root.findall("part"):
+        pitched = [n for n in part.iter("note") if n.find("rest") is None and n.find("chord") is None]
+        lines: Dict[str, List] = {}
+        for n in pitched:
+            for lyr in n.findall("lyric"):
+                lines.setdefault(lyr.get("number", "1"), []).append(lyr)
+        coverage[part.get("id")] = (len(pitched), lines)
+    best = max((len(l) / max(1, n) for n, lines in coverage.values() for l in lines.values()), default=0)
+    if best >= 0.15:
+        for part in root.findall("part"):
+            n, lines = coverage[part.get("id")]
+            for num, lyrs in lines.items():
+                texts = [(l.findtext("text") or "").strip() for l in lyrs]
+                junk = sum(1 for t in texts if re.search(r"\d", t) or _is_chord_symbol(t))
+                # Words of running prose (capitalised, whole words with no
+                # hyphenation) rather than sung syllables
+                syllabics = [l.findtext("syllabic") for l in lyrs]
+                prose = sum(1 for sy in syllabics if sy in (None, "single")) >= 0.9 * len(lyrs)
+                if junk >= 0.3 * len(lyrs) or (len(lyrs) < 0.12 * n and prose and len(lyrs) <= 12):
+                    for l in lyrs:
+                        l.getparent().remove(l)
+                        changed = True
+    if not changed:
+        return xml_content
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8",
+                          doctype=root.getroottree().docinfo.doctype or None).decode("utf-8")
+
+
+def dedupe_ties(xml_content: str) -> str:
+    """
+    The engine sometimes writes the same tie several times on one note
+    (a <tie type="start"/> per tied voice), which the schema rejects: keep one
+    of each type, stop before start.
+    """
+    try:
+        root = etree.fromstring(xml_content.encode("utf-8"))
+    except etree.XMLSyntaxError:
+        return xml_content
+    changed = False
+    for note in root.iter("note"):
+        ties = note.findall("tie")
+        if len(ties) > 1:
+            kinds = []
+            for t in ties:
+                if t.get("type") in kinds or len(kinds) >= 2:
+                    note.remove(t)
+                    changed = True
+                else:
+                    kinds.append(t.get("type"))
+            kept = note.findall("tie")
+            if len(kept) == 2 and kept[0].get("type") == "start":
+                kept[0].addprevious(kept[1])
+                changed = True
+        for notations in note.findall("notations"):
+            seen = set()
+            for t in notations.findall("tied"):
+                key = (t.get("type"), t.get("number"))
+                if key in seen:
+                    notations.remove(t)
+                    changed = True
+                seen.add(key)
+    if not changed:
+        return xml_content
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8",
+                          doctype=root.getroottree().docinfo.doctype or None).decode("utf-8")
+
+
+def drop_prose_directions(xml_content: str) -> str:
+    """
+    Text below the music (the verses of a psalm, notes, credits) is read as a
+    direction on the last staff: a direction of many words is prose, not a
+    tempo or expression mark.
+    """
+    try:
+        root = etree.fromstring(xml_content.encode("utf-8"))
+    except etree.XMLSyntaxError:
+        return xml_content
+    changed = False
+    for d in list(root.iter("direction")):
+        words = " ".join(w.text or "" for w in d.iter("words"))
+        n_words = len(words.split())
+        # Long, or several words below the staff (expression marks are short)
+        below = d.get("placement") == "below"
+        if d.find(".//metronome") is None and (n_words > 6 or (below and n_words >= 3)):
+            d.getparent().remove(d)
+            changed = True
+    if not changed:
+        return xml_content
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8",
+                          doctype=root.getroottree().docinfo.doctype or None).decode("utf-8")
