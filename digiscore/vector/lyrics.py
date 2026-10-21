@@ -325,6 +325,16 @@ def extract_lyrics_for_staff(
                 )
             )
 
+    # Printed numbers that are not a verse count (a psalm's verse "20.",
+    # numbering continued from a previous page...): number lines by position
+    nums = [l.verse_number for l in lyric_lines]
+    if nums and (max(nums) > len(nums) + 2 or len(set(nums)) < len(nums)):
+        lines_by_y = sorted(lyric_lines, key=lambda l: l.y)
+        for k, l in enumerate(lines_by_y):
+            l.verse_number = k + 1
+            for syl in l.syllables:
+                syl.verse_number = k + 1
+
     # Sort lyric lines by verse number
     lyric_lines.sort(key=lambda l: l.verse_number)
     return lyric_lines
