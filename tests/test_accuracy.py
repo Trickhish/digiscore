@@ -143,6 +143,7 @@ CPDL_GOOD = {
     "Hane-ach": 1.0, "Hassler-Ach_Gott_vom_Himmel": 1.0, "Treue_Liebe": 1.0,
     "Lassus_A_ce_matin": 0.97, "Br-120": 0.95, "Stalnaker_ASpotlessRose_Chants_v03": 0.95,
     "Franck-Ach_herr_mich_armen_Sünder": 0.94, "Bell_A_highland_lad": 0.93, "Ws-brah-abs": 0.91,
+    "Acceptabis_sacrificium": 0.95, "Verkaik-Absalom": 0.87,
 }
 
 

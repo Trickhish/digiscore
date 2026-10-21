@@ -167,6 +167,17 @@ DRIVER_LETTER_MAPPING: Dict[str, str] = {
 _letter_alias: set = set()
 _cp437_alias: set = set()
 
+# Finale fonts whose text layer comes out as Greek letters (a Symbol-like
+# ToUnicode): codes identified by rendering them. Used for a Sonata-layout
+# font only when the document shows such Greek characters in it.
+GREEK_SONATA_MAPPING: Dict[str, str] = {
+    "%": "gClef", ">": "fClef", "\u03a5": "gClef8vb",
+    "\u0396": "accidentalNatural", "\u0397": "accidentalSharp", "\u03b1": "accidentalFlat",
+    "\u03b2": "timeSigCommon", "\u03d6": "noteheadWhole", "\u2212": "augmentationDot",
+    "\u0399": "flag8thUp", "\u03b9": "flag8thDown",
+}
+_greek_sonata: set = set()
+
 
 def _cp437_mac(char: str) -> str:
     """The Mac Roman character of a byte the text layer decoded as code page 437."""
@@ -321,12 +332,17 @@ def detect_capella_aliases(doc) -> None:
     _sonata_alias.clear()
     _letter_alias.clear()
     _cp437_alias.clear()
+    _greek_sonata.clear()
     use: Dict[str, collections.Counter] = {}
     for page in doc:
         for block in page.get_text("rawdict").get("blocks", []):
             for line in block.get("lines", []):
                 for span in line.get("spans", []):
                     base = _base_font(span.get("font", ""))
+                    if base.startswith(SONATA_LAYOUT_FONTS):
+                        if any(0x391 <= ord(ch["c"]) <= 0x3D6 for ch in span.get("chars", [])):
+                            _greek_sonata.add(base)
+                        continue
                     if not base.startswith("TT") and not re.fullmatch(r"T\d+", base):
                         continue
                     c = use.setdefault(base, collections.Counter())
@@ -394,6 +410,8 @@ def get_glyph_name(char: str, font_name: str = "") -> Optional[str]:
         return DRIVER_LETTER_MAPPING.get(char)
     if base in _mozart_alias:
         return MOZART_MAPPING.get(char)
+    if base in _greek_sonata and char in GREEK_SONATA_MAPPING:
+        return GREEK_SONATA_MAPPING[char]
     if base.startswith(SONATA_LAYOUT_FONTS) or base in _sonata_alias:
         return OPUS_MAPPING.get(_symbol_char(char))
     if base in _glyph_names:

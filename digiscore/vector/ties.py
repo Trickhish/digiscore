@@ -35,7 +35,11 @@ def find_arcs(drawings: List[dict]) -> List[tuple]:
         items = d.get("items", [])
         if not items:
             continue
-        if not all(it[0] == "c" for it in items):
+        kinds = [it[0] for it in items]
+        # Finale closes the lens with short lines at its tips (c l c l)
+        if set(kinds) == {"c", "l"} and kinds.count("c") >= kinds.count("l"):
+            pass
+        elif not all(k == "c" for k in kinds):
             # Printer drivers flatten curves into many short segments: a filled
             # lens outline of a dozen or more lines that is not straight
             if len(items) < 12 or not all(it[0] == "l" for it in items):

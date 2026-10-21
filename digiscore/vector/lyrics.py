@@ -63,6 +63,16 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
     tokens: List[Tuple] = []
     _STYLED.clear()
     raw = page.get_text("rawdict")
+    gaps: dict = {}
+    for block in raw.get("blocks", []):
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                chs = span.get("chars", [])
+                gaps.setdefault(span.get("font", ""), []).extend(
+                    b["bbox"][0] - a["bbox"][2] for a, b in zip(chs, chs[1:])
+                    if not a["c"].isspace() and not b["c"].isspace())
+    # Near the top of the gaps seen inside runs: what spacing a word may have
+    letter_gap = {f: sorted(g)[int(len(g) * 0.9)] for f, g in gaps.items() if len(g) >= 20}
     for block in raw.get("blocks", []):
         for line in block.get("lines", []):
             for span in line.get("spans", []):
@@ -73,6 +83,12 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
                 styled = bool(span.get("flags", 0) & 18) or re.search(r"(bold|italic|oblique)", font, re.I)
 
                 gap_limit = gap_ratio * size
+                # Text set with loose letter spacing (PDF-XChange from Finale): the
+                # gaps inside words are themselves about the limit, so judge a
+                # gap against the font's usual one on the page
+                usual = letter_gap.get(font)
+                if usual is not None and usual > 0.5 * gap_limit:
+                    gap_limit = max(gap_limit, 2.0 * usual)
                 cur = None
                 n_before = len(tokens)
                 for ch in span.get("chars", []):
