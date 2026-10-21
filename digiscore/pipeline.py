@@ -216,6 +216,17 @@ def convert_score(
                         xml_content = read_musicxml_from_file(tmp_mxl)
                 except Exception as e:
                     warnings.warn(f"Time signature injection skipped: {e}")
+            # Time signatures later in the piece: check each one the engine read
+            if os.path.isfile(tmp_book):
+                try:
+                    from digiscore.omr.timesig import apply_time_pair_fixes, verify_book_time_pairs
+                    fixes = verify_book_time_pairs(tmp_book, abs_input, omr_input)
+                    if fixes and apply_time_pair_fixes(tmp_book, fixes):
+                        print(f"[*] Corrected {len(fixes)} misread time signature(s); redoing rhythm")
+                        run_notelite_omr(tmp_book, output_path=tmp_mxl, keep_book=tmp_book)
+                        xml_content = read_musicxml_from_file(tmp_mxl)
+                except Exception as e:
+                    warnings.warn(f"Time signature check skipped: {e}")
             if image_ts:
                 from digiscore.omr.inject_time import apply_time_signature
                 xml_content = apply_time_signature(xml_content, image_ts, image_symbol)

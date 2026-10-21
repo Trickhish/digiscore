@@ -251,3 +251,125 @@ def detect_time_signature_in_book(sheets: List, *pdf_paths: str
         return None, None, mean
     rational, symbol = to_rational(label)
     return rational, symbol, mean
+
+
+def verify_book_time_pairs(omr_path: str, *pdf_paths: str, min_gain: float = 0.025
+                           ) -> Dict[Tuple[str, str], str]:
+    """
+    Check every time signature the engine found against the image. Returns
+    {(sheet entry name, inter id): corrected rational} for those whose image
+    shows another signature (C/cut map to 4/4 and 2/2). All the signatures of
+    a system must agree on the same correction.
+    """
+    import re
+    import zipfile
+
+    import pymupdf
+    from lxml import etree
+
+    fixes: Dict[Tuple[str, str], str] = {}
+    with zipfile.ZipFile(omr_path) as z:
+        names = [n for n in z.namelist() if re.fullmatch(r"sheet#\d+/sheet#\d+\.xml", n)]
+        sheets = {n: etree.fromstring(z.read(n)) for n in names}
+    docs = [pymupdf.open(p) for p in dict.fromkeys(p for p in pdf_paths if p)]
+    for name, root in sheets.items():
+        num = int(re.search(r"#(\d+)/", name).group(1))
+        pic = root.find("picture")
+        il = float(root.find("scale/interline").get("main"))
+        images = []
+        for doc in docs:
+            if num - 1 >= len(doc):
+                continue
+            page = doc[num - 1]
+            zoom = float(pic.get("width")) / page.rect.width
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
+            images.append(Image.frombytes("L", (pix.width, pix.height), pix.samples))
+        for sysm in root.iter("system"):
+            staff_top = {}
+            for st in sysm.iter("staff"):
+                ys = [float(q.get("y")) for q in st.iter("point")]
+                if ys:
+                    staff_top[st.get("id")] = min(ys)
+            sys_fix: Dict[str, str] = {}
+            sys_pairs = 0
+            for c in sysm.findall("sig/inters"):
+                for e in c:
+                    if e.tag != "time-pair" or e.get("staff") not in staff_top:
+                        continue
+                    sys_pairs += 1
+                    b = e.find("bounds")
+                    x = float(b.get("x"))
+                    w = float(b.get("w"))
+                    best: Dict[str, float] = {}
+                    for img in images:
+                        _, sc = detect_from_image(img, staff_top[e.get("staff")], il,
+                                                  x - 1.5 * il, x + w + 1.5 * il)
+                        for k, v in sc.items():
+                            best[k] = max(best.get(k, -1.0), v)
+                    if not best:
+                        continue
+                    label = max(best, key=best.get)
+                    rational, _ = to_rational(label)
+                    have = e.get("time-rational")
+                    if rational and rational != have and best[label] >= MIN_SCORE:
+                        # The engine's own reading must score clearly lower
+                        own = max(best.get(have, -1.0),
+                                  best.get("C", -1.0) if have == "4/4" else -1.0,
+                                  best.get("C|", -1.0) if have == "2/2" else -1.0)
+                        if best[label] - own >= min_gain:
+                            sys_fix[e.get("id")] = rational
+            if sys_fix and len(sys_fix) == sys_pairs and len(set(sys_fix.values())) == 1:
+                for pid, rational in sys_fix.items():
+                    fixes[(name, pid)] = rational
+    return fixes
+
+
+def apply_time_pair_fixes(omr_path: str, fixes: Dict[Tuple[str, str], str]) -> bool:
+    """Rewrite the time-rational of the given time-pairs and make the engine redo the rhythm."""
+    import re
+    import zipfile
+
+    from lxml import etree
+
+    if not fixes:
+        return False
+    with zipfile.ZipFile(omr_path) as z:
+        entries = {n: z.read(n) for n in z.namelist()}
+    for name in {n for n, _ in fixes}:
+        root = etree.fromstring(entries[name])
+        for e in root.iter("time-pair"):
+            new = fixes.get((name, e.get("id")))
+            if new:
+                e.set("time-rational", new)
+                e.set("frozen", "true")
+        # The pair's digit inters would contradict the new value: drop them
+        for sysm in root.iter("system"):
+            pairs = [e for e in sysm.iter("time-pair") if (name, e.get("id")) in fixes]
+            boxes = [p.find("bounds") for p in pairs]
+            gone = set()
+            for c in sysm.findall("sig/inters"):
+                for e in list(c):
+                    if e.tag == "time-number" and any(_inside_box(e.find("bounds"), bb) for bb in boxes):
+                        gone.add(e.get("id"))
+                        c.remove(e)
+            for rel in list(sysm.iter("relation")):
+                if rel.get("source") in gone or rel.get("target") in gone:
+                    rel.getparent().remove(rel)
+        entries[name] = etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+    bk = entries["book.xml"].decode("utf-8")
+    bk = re.sub(r" RHYTHMS PAGE</steps>", "</steps>", bk)
+    bk = re.sub(r" RHYTHMS</steps>", "</steps>", bk)
+    bk = re.sub(r" PAGE</steps>", "</steps>", bk)
+    entries["book.xml"] = bk.encode("utf-8")
+    with zipfile.ZipFile(omr_path, "w", zipfile.ZIP_STORED) as zw:
+        for n, data in entries.items():
+            zw.writestr(n, data)
+    return True
+
+
+def _inside_box(b, outer) -> bool:
+    if b is None or outer is None:
+        return False
+    x, y, w, h = (float(b.get(k)) for k in ("x", "y", "w", "h"))
+    X, Y, W, H = (float(outer.get(k)) for k in ("x", "y", "w", "h"))
+    return X - 2 <= x and Y - 2 <= y and x + w <= X + W + 2 and y + h <= Y + H + 2

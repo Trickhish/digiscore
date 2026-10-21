@@ -249,6 +249,21 @@ def _split_options(s: OcrSyllable) -> List[Tuple[OcrSyllable, OcrSyllable, float
     return out
 
 
+def _multi_splits(s: OcrSyllable, max_pieces: int = 4) -> List[Tuple[List[OcrSyllable], float]]:
+    """Ways to cut a syllable into 2..max_pieces pieces, with the summed gap width at the cuts."""
+    out: List[Tuple[List[OcrSyllable], float]] = []
+
+    def rec(cur: OcrSyllable, done: List[OcrSyllable], gaps: float):
+        if len(done) + 1 >= max_pieces:
+            return
+        for a, b, gap in _split_options(cur):
+            out.append((done + [a, b], gaps + gap))
+            rec(b, done + [a], gaps + gap)
+
+    rec(s, [], 0.0)
+    return out
+
+
 def assign_to_chords(syls: List[OcrSyllable], chords: List[Chord], interline: float) -> Dict[str, Tuple[str, str]]:
     """
     Align syllables to chords left to right (both keep their order).
@@ -274,7 +289,7 @@ def assign_to_chords(syls: List[OcrSyllable], chords: List[Chord], interline: fl
     def dist(sy: OcrSyllable, c: Chord) -> float:
         return min(abs(c.cx - sy.cx), abs(c.x0 - sy.x0))
 
-    splits = [_split_options(sy) for sy in syls]
+    splits = [_multi_splits(sy) for sy in syls]
     INF = float("inf")
     cost = [[INF] * (m + 1) for _ in range(n + 1)]
     back = [[None] * (m + 1) for _ in range(n + 1)]
@@ -296,12 +311,15 @@ def assign_to_chords(syls: List[OcrSyllable], chords: List[Chord], interline: fl
                     cost[i + 1][j + 1] = cur + d
                     back[i + 1][j + 1] = ("match", None)
             if i < n and j + 1 < m:
-                for a, b, gap in splits[i]:
-                    d = dist(a, chords[j]) + dist(b, chords[j + 1])
-                    c2 = cur + d + split_pen - min(gap, 0.5 * split_pen)
-                    if d < 6 * interline and c2 < cost[i + 1][j + 2]:
-                        cost[i + 1][j + 2] = c2
-                        back[i + 1][j + 2] = ("split", (a, b))
+                for pieces, gap_sum in splits[i]:
+                    k = len(pieces)
+                    if j + k > m:
+                        continue
+                    d = sum(dist(p, chords[j + t]) for t, p in enumerate(pieces))
+                    c2 = cur + d + (k - 1) * split_pen - min(gap_sum, 0.5 * (k - 1) * split_pen)
+                    if d < 3 * k * interline and c2 < cost[i + 1][j + k]:
+                        cost[i + 1][j + k] = c2
+                        back[i + 1][j + k] = ("split", pieces)
 
     # Walk back
     i, j = n, m
@@ -316,10 +334,9 @@ def assign_to_chords(syls: List[OcrSyllable], chords: List[Chord], interline: fl
             pairs.append((j - 1, syls[i - 1]))
             i, j = i - 1, j - 1
         else:
-            a, b = data
-            pairs.append((j - 1, b))
-            pairs.append((j - 2, a))
-            i, j = i - 1, j - 2
+            for t, p in enumerate(reversed(data)):
+                pairs.append((j - 1 - t, p))
+            i, j = i - 1, j - len(data)
     pairs.reverse()
 
     for k, (cj, sy) in enumerate(pairs):

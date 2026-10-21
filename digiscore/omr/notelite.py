@@ -222,6 +222,10 @@ def run_notelite_omr(
                 # On blurred or noisy scans the beam thickness is under-estimated and
                 # real beams are then rejected; force a realistic lower bound
                 "-constant", "com.notelite.omr.sheet.ScaleBuilder.beamMinFraction=0.4",
+                # A short last system (one or two bars) is otherwise not taken as a
+                # staff: its lines are far shorter than the page's other staves
+                "-constant", "com.notelite.omr.sheet.grid.ClustersRetriever.minClusterLengthRatio=0.1",
+                "-constant", "com.notelite.omr.sheet.grid.LinesRetriever.minStaffLength=5",
             ]
         if sheets:
             cmd.extend(["-sheets", str(sheets)])
