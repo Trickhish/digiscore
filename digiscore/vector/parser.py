@@ -7,9 +7,9 @@ from typing import Dict, List, Optional, Tuple
 import pymupdf
 
 from digiscore.vector.ties import find_arcs, mark_ties
-from digiscore.smufl import get_glyph_name, is_clef, is_notehead, is_rest
+from digiscore.smufl import detect_mscore_flavour, get_glyph_name, is_clef, is_notehead, is_rest
 from digiscore.vector.duration import resolve_note_durations
-from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_tokens, match_syllables_to_notes
+from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_tokens, match_syllables_to_notes, styled_tokens
 from digiscore.vector.measure import create_measures_for_staff, extract_barlines_for_staff
 from digiscore.vector.pitch import calculate_pitch_from_y
 from digiscore.vector.staff import Staff, System, detect_staves_on_page, group_staves_into_systems
@@ -158,6 +158,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     """
     all_systems: List[System] = []
     page_data = []
+    detect_mscore_flavour(doc)
 
     # 1. Extract staves and page elements per page
     for page_idx in range(len(doc)):
@@ -169,6 +170,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
 
         raw = page.get_text("rawdict")
         words = extract_text_tokens(page)
+        styled_words = set(styled_tokens(page))
 
         # Extract SMuFL / Opus glyphs
         glyphs = []
@@ -202,6 +204,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
             "beams": beams,
             "stems": stems,
             "words": words,
+            "styled_words": styled_words,
             "drawings": drawings,
         })
 
@@ -236,6 +239,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         beams = p_info["beams"]
         stems = p_info["stems"]
         words = p_info["words"]
+        styled_words = p_info.get("styled_words", set())
         drawings = p_info["drawings"]
         tie_arcs = find_arcs(drawings)
 
@@ -267,6 +271,15 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                     if "fClef" in c_name:
                         staff.clef_sign = "F"
                         staff.clef_line = 4
+                        staff.clef_octave = 0
+                    elif c_name.startswith("cClef"):
+                        # The clef's centre marks its line (alto: 3, tenor: 4)
+                        bb = staff_clefs[0].get("bbox")
+                        cy = (bb[1] + bb[3]) / 2 if bb and bb[3] - bb[1] < 6 * staff.line_spacing \
+                            else staff_clefs[0]["y"]
+                        line = int(round((staff.bottom_y - cy) / staff.line_spacing)) + 1
+                        staff.clef_sign = "C"
+                        staff.clef_line = min(5, max(1, line))
                         staff.clef_octave = 0
                     elif "gClef8vb" in c_name:
                         staff.clef_sign = "G"
@@ -390,6 +403,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                     next_staff_top_y=next_top,
                     staff_x_min=staff.x_min,
                     staff_x_max=staff.x_max,
+                    styled=styled_words,
                 )
                 match_syllables_to_notes(staff_notes_raw, lyric_lines)
 

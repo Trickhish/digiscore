@@ -66,9 +66,10 @@ def calculate_pitch_from_y(
         base_step_idx = 4  # G
         base_octave = 2 + clef_octave
     elif clef_sign == "C":
-        # C on clef_line (e.g. line 3 = step 4) -> line 1 (step 0) is F3
-        base_step_idx = 3  # F
-        base_octave = 3 + clef_octave
+        # Middle C on clef_line: line 1 is 2*(clef_line-1) steps below C4
+        below = 2 * (clef_line - 1)
+        base_step_idx = (0 - below) % 7
+        base_octave = 4 + (0 - below) // 7 + clef_octave
     else:
         base_step_idx = 2
         base_octave = 4

@@ -41,6 +41,14 @@ def _is_music_char(c: str, font: str) -> bool:
     return any(h in f for h in MUSIC_FONT_HINTS)
 
 
+# Tokens set in bold or italic by the last extract_text_tokens call
+_STYLED: set = set()
+
+
+def styled_tokens(page=None) -> set:
+    return set(_STYLED)
+
+
 def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
     """
     Text tokens (x0, y0, x1, y1, text) built from individual characters.
@@ -49,14 +57,20 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
     Music-font glyphs are skipped.
     """
     tokens: List[Tuple] = []
+    _STYLED.clear()
     raw = page.get_text("rawdict")
     for block in raw.get("blocks", []):
         for line in block.get("lines", []):
             for span in line.get("spans", []):
                 font = span.get("font", "")
                 size = span.get("size", 10.0) or 10.0
+                # Bold or italic text in a lyric band is a direction (dim., Soli,
+                # Tutti...) when the lyrics themselves are upright: remember it
+                styled = bool(span.get("flags", 0) & 18) or re.search(r"(bold|italic|oblique)", font, re.I)
+
                 gap_limit = gap_ratio * size
                 cur = None
+                n_before = len(tokens)
                 for ch in span.get("chars", []):
                     c = ch["c"]
                     bx0, by0, bx1, by1 = ch["bbox"]
@@ -78,6 +92,8 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
                         cur[4] += c
                 if cur:
                     tokens.append(tuple(cur))
+                if styled:
+                    _STYLED.update(tokens[n_before:])
     # Lyric hyphens are often drawn as short horizontal strokes rather than text
     for d in page.get_drawings():
         items = d.get("items", [])
@@ -97,6 +113,7 @@ def extract_lyrics_for_staff(
     next_staff_top_y: float,
     staff_x_min: float,
     staff_x_max: float,
+    styled: Optional[set] = None,
 ) -> List[LyricLine]:
     """
     Extracts lyric lines located vertically between staff_bottom_y and next_staff_top_y.
@@ -105,6 +122,8 @@ def extract_lyrics_for_staff(
     # Filter words belonging to this staff's lyric band
     # Margin below staff: at least 3 pt below bottom line, up to next staff top minus 5 pt
     band_words = []
+    styled_band = []
+    n_page_words = len(page_words)
     max_y = next_staff_top_y - 5.0 if next_staff_top_y > staff_bottom_y else staff_bottom_y + 120.0
 
     for w in page_words:
@@ -116,10 +135,20 @@ def extract_lyrics_for_staff(
 
         # Check if inside vertical lyric band and within horizontal staff extent
         if staff_bottom_y + 3.0 <= y0 <= max_y and (staff_x_min - 20 <= x0 <= staff_x_max + 20):
+            if styled and tuple(w) in styled:
+                styled_band.append((x0, y0, x1, y1, text))
             band_words.append((x0, y0, x1, y1, text))
 
     if not band_words:
         return []
+    if styled_band:
+        plain = [w for w in band_words if w not in styled_band]
+        # Only when the page's lyrics are upright: some editions set the whole
+        # text in italic
+        if len(styled) < 0.3 * max(1, n_page_words):
+            band_words = plain
+            if not band_words:
+                return []
 
     # Cluster real words into lines by baseline; hyphen strokes join the line they sit inside
     hyphens = [w for w in band_words if w[4] == "-"]

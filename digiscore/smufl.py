@@ -75,18 +75,31 @@ OPUS_SPECIAL_MAPPING: Dict[str, str] = {
 
 # MuseScore 2.x "MScore" font: private-use codepoints that predate SMuFL
 MSCORE2_MAPPING: Dict[str, str] = {
+    # Identified by rendering each code from MuseScore 2.x PDFs
     "\ue12d": "noteheadBlack",
     "\ue12c": "noteheadHalf",
     "\ue12b": "noteheadWhole",
+    "\ue12a": "noteheadDoubleWhole",
     "\ue127": "augmentationDot",
     "\ue10e": "accidentalSharp",
-    "\ue112": "accidentalFlat",
-    "\ue111": "accidentalNatural",
+    "\ue114": "accidentalFlat",
+    "\ue113": "accidentalNatural",
+    "\ue100": "restWhole",
+    "\ue101": "restHalf",
+    "\ue107": "restQuarter",
+    "\ue109": "rest8th",
+    "\ue10a": "rest16th",
     "\ue19e": "gClef",
     "\ue1d7": "gClef8vb",
     "\ue19c": "fClef",
+    "\ue19a": "cClef",
     "\ue190": "flag8thUp",
+    "\ue191": "flag16thUp",
     "\ue194": "flag8thDown",
+    "\ue197": "flag16thDown",
+    "\ue09a": "timeSigCommon",
+    "\ue09b": "timeSigCutCommon",
+    "\ue158": "fermataAbove",
     **_TIME_DIGITS,
 }
 
@@ -114,6 +127,34 @@ def _base_font(font_name: str) -> str:
     return font_name.split("+", 1)[-1]
 
 
+# Whether a font named "MScore" uses MuseScore 2's private codes (True) or
+# SMuFL ones (MuseScore 3+ embeds Emmentaler-SMuFL under the same name).
+# Set per document by detect_mscore_flavour.
+_legacy_mscore: Dict[str, bool] = {}
+
+
+def detect_mscore_flavour(doc) -> None:
+    """Look at a PDF's MScore glyphs: SMuFL noteheads (U+E0A2-E0A4) mean SMuFL."""
+    _legacy_mscore.clear()
+    legacy = smufl = 0
+    for page in doc:
+        for block in page.get_text("rawdict").get("blocks", []):
+            for line in block.get("lines", []):
+                for span in line.get("spans", []):
+                    if _base_font(span.get("font", "")) not in ("MScoreRegular", "MScore"):
+                        continue
+                    for ch in span.get("chars", []):
+                        cp = ord(ch["c"])
+                        if 0xE0A2 <= cp <= 0xE0A4:
+                            smufl += 1
+                        elif cp in (0xE12B, 0xE12C, 0xE12D):
+                            legacy += 1
+        if legacy + smufl > 20:
+            break
+    if legacy or smufl:
+        _legacy_mscore["MScore"] = _legacy_mscore["MScoreRegular"] = legacy > smufl
+
+
 def get_glyph_name(char: str, font_name: str = "") -> Optional[str]:
     """Identify music symbol name from character and font."""
     load_smufl()
@@ -124,7 +165,7 @@ def get_glyph_name(char: str, font_name: str = "") -> Optional[str]:
         return OPUS_SPECIAL_MAPPING.get(_symbol_char(char))
     if base.startswith(SONATA_LAYOUT_FONTS):
         return OPUS_MAPPING.get(_symbol_char(char))
-    if base == "MScoreRegular":
+    if base in ("MScoreRegular", "MScore") and _legacy_mscore.get(base, base == "MScoreRegular"):
         return MSCORE2_MAPPING.get(char)
 
     cp = f"U+{ord(char):04X}"
