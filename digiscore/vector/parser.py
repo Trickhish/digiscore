@@ -390,7 +390,10 @@ def _staff_signature(staff: Staff, glyphs: List[dict]) -> tuple:
     cl.sort(key=lambda g: g["x"])
     name = cl[0]["name"] if cl else ""
     sign = "F" if "fClef" in name else "C" if name.startswith("cClef") else "G"
-    return sign, "8vb" in name, round(staff.line_spacing, 1)
+    low = "8vb" in name or bool(cl and any(
+        g["name"] == "clef8" and abs(g["x"] - cl[0]["x"]) < 4 * staff.line_spacing
+        and staff.bottom_y < g["y"] < staff.bottom_y + 5 * staff.line_spacing for g in glyphs))
+    return sign, low, round(staff.line_spacing, 1)
 
 
 def _align_staves(sig: List[tuple], full: List[tuple]) -> List[int]:
@@ -470,19 +473,72 @@ def _merge_split_systems(page_data: List[dict]) -> None:
         pd["systems"] = out
 
 
+def _courtesy_clef(staff: Staff, glyphs: List[dict]) -> bool:
+    """A clef drawn at the very end of the staff (announcing a change)."""
+    sp = staff.line_spacing
+    return any(is_clef(g["name"]) and staff.x_max - 6 * sp <= g["x"] <= staff.x_max + 2
+               and staff.top_y - 2 * sp <= g["y"] <= staff.bottom_y + 2 * sp for g in glyphs)
+
+
+def _union_template(sigs: List[List[tuple]]) -> List[tuple]:
+    """Shortest staff list (by clef) that every system's staves fit into in order."""
+    def key(t):
+        return t[:2]
+    tmpl = list(sigs[0])
+    for sg in sigs[1:]:
+        a, b = [key(t) for t in tmpl], [key(t) for t in sg]
+        n, m = len(a), len(b)
+        # Shortest common supersequence by dynamic programming
+        L = [[0] * (m + 1) for _ in range(n + 1)]
+        for i in range(n - 1, -1, -1):
+            for j in range(m - 1, -1, -1):
+                L[i][j] = L[i + 1][j + 1] + 1 if a[i] == b[j] else max(L[i + 1][j], L[i][j + 1])
+        out, i, j = [], 0, 0
+        while i < n and j < m:
+            if a[i] == b[j]:
+                out.append(tmpl[i]); i += 1; j += 1
+            elif L[i + 1][j] >= L[i][j + 1]:
+                out.append(tmpl[i]); i += 1
+            else:
+                out.append(sg[j]); j += 1
+        out.extend(tmpl[i:]); out.extend(sg[j:])
+        tmpl = out
+    return tmpl
+
+
 def _assign_parts(page_data: List[dict]) -> None:
     """Part index of each staff when systems leave some parts out."""
     _merge_split_systems(page_data)
     systems = [(sys, pd["glyphs"]) for pd in page_data for sys in pd["systems"]]
     width = max(len(sys.staves) for sys, _ in systems)
-    if all(len(sys.staves) == width for sys, _ in systems):
+    sigs = [[_staff_signature(st, g) for st in sys.staves] for sys, g in systems]
+    # Clefs only (sign, 8vb): staff sizes vary by a hair between systems
+    kinds = {tuple(s[:2] for s in sg) for sg in sigs}
+    if all(len(sys.staves) == width for sys, _ in systems) and len(kinds) == 1:
         return
-    full_sys, full_g = next((sy, g) for sy, g in systems if len(sy.staves) == width)
-    full = [_staff_signature(st, full_g) for st in full_sys.staves]
-    for sys, g in systems:
-        if len(sys.staves) == width:
+    full = next(sg for sg in sigs if len(sg) == width)
+    braced = any(g["name"] == "brace" for pd in page_data for g in pd["glyphs"])
+    if all(len(sg) == width for sg in sigs) and braced:
+        return  # keyboard staves: one instrument whose clefs change freely
+    if all(len(sg) == width for sg in sigs):
+        # Same staff count but other parts (a soloist's staff replacing one),
+        # unless a courtesy clef at the end of the previous system announces
+        # a clef change of the same part
+        for k in range(1, len(systems)):
+            (prev, pg), (cur, _) = systems[k - 1], systems[k]
+            for j, (a, b) in enumerate(zip(sigs[k - 1], sigs[k])):
+                if a[:2] != b[:2] and not _courtesy_clef(prev.staves[j], pg):
+                    full = _union_template(sigs)
+                    break
+            else:
+                continue
+            break
+        else:
+            return
+    for (sys, _), sg in zip(systems, sigs):
+        if sg == full:
             continue
-        idx = _align_staves([_staff_signature(st, g) for st in sys.staves], full)
+        idx = _align_staves(sg, full)
         for st, k in zip(sys.staves, idx):
             st.part_idx = k
 
@@ -606,7 +662,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     all_systems = [sy for pd in page_data for sy in pd["systems"]]
 
     # Determine number of parts across systems
-    part_count = max(len(sys.staves) for sys in all_systems)
+    part_count = max(st.part_idx for sys in all_systems for st in sys.staves) + 1
     
     # Standard choral part names
     default_names = ["Soprano", "Alto", "Tenor", "Bass"] if part_count == 4 else [f"Voice {i+1}" for i in range(part_count)]
