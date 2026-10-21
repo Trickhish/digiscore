@@ -37,8 +37,9 @@ MUSIC_FONT_HINTS = ("leland", "bravura", "emmentaler", "opus", "mscore", "petalu
 def _is_music_char(c: str, font: str) -> bool:
     if 0xE000 <= ord(c) <= 0xF8FF:
         return True
-    from digiscore.smufl import _base_font, _capella_alias, _sonata_alias
-    if _base_font(font) in _capella_alias or _base_font(font) in _sonata_alias:
+    from digiscore.smufl import _base_font, _capella_alias, _letter_alias, _sonata_alias
+    b = _base_font(font)
+    if b in _capella_alias or b in _sonata_alias or b in _letter_alias:
         return True
     f = font.lower()
     return any(h in f for h in MUSIC_FONT_HINTS)

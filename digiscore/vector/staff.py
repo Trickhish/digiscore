@@ -154,27 +154,34 @@ def group_staves_into_systems(staves: List[Staff], drawings: Optional[List[dict]
 
     connected = [False] * (n - 1)
     if drawings:
+        # Vertical pieces (x, y0, y1): lines and thin rectangles
+        segs = []
         for d in drawings:
             for item in d["items"]:
                 if item[0] == "l":
                     p1, p2 = item[1], item[2]
                     if abs(p1.x - p2.x) < 0.5:
-                        y0, y1 = min(p1.y, p2.y), max(p1.y, p2.y)
-                        for k in range(n - 1):
-                            s1 = staves_sorted[k]
-                            s2 = staves_sorted[k + 1]
-                            if s1.x_min - 10 <= p1.x <= s1.x_max + 10:
-                                if y0 <= s1.bottom_y + 2 and y1 >= s2.top_y - 2:
-                                    connected[k] = True
+                        segs.append((round(p1.x, 1), min(p1.y, p2.y), max(p1.y, p2.y)))
                 elif item[0] == "re":
                     r = item[1]
                     if r.width < 5.0:
-                        for k in range(n - 1):
-                            s1 = staves_sorted[k]
-                            s2 = staves_sorted[k + 1]
-                            if s1.x_min - 10 <= r.x0 <= s1.x_max + 10:
-                                if r.y0 <= s1.bottom_y + 2 and r.y1 >= s2.top_y - 2:
-                                    connected[k] = True
+                        segs.append((round(r.x0, 1), r.y0, r.y1))
+        # Some drivers draw a system connector as pieces breaking between
+        # staves: chain collinear pieces that touch
+        merged = []
+        for x, y0, y1 in sorted(segs):
+            if merged and merged[-1][0] == x and y0 <= merged[-1][2] + 0.5:
+                if y1 > merged[-1][2]:
+                    merged[-1][2] = y1
+            else:
+                merged.append([x, y0, y1])
+        for x, y0, y1 in merged:
+            for k in range(n - 1):
+                s1 = staves_sorted[k]
+                s2 = staves_sorted[k + 1]
+                if s1.x_min - 10 <= x <= s1.x_max + 10:
+                    if y0 <= s1.bottom_y + 2 and y1 >= s2.top_y - 2:
+                        connected[k] = True
 
     systems: List[System] = []
     current_sys = System(page_idx=staves_sorted[0].page_idx, system_idx=0)

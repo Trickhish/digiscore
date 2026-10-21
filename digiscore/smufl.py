@@ -151,6 +151,20 @@ CAPELLA_MAPPING: Dict[int, str] = {
     **{0x30 + d: f"timeSig{d}" for d in range(10)},
 }
 
+# Music font of older Windows notation programs as printed through a driver
+# (seen in CPDL editions): letters for symbols, identified by rendering
+DRIVER_LETTER_MAPPING: Dict[str, str] = {
+    "a": "gClef", "b": "fClef", "M": "gClef8vb",
+    "k": "noteheadBlack", "j": "noteheadHalf", "i": "noteheadWhole",
+    "m": "restWhole", "n": "restHalf", "o": "restQuarter", "p": "rest8th",
+    "z": "augmentationDot", "f": "accidentalFlat", "d": "accidentalSharp", "e": "accidentalNatural",
+    "y": "fermataAbove",
+    "\u201a": "flag8thUp",    # ‚
+    "\u2021": "flag8thDown",  # ‡
+    **_TIME_DIGITS,
+}
+_letter_alias: set = set()
+
 # Fonts known to be capella / Sonata-layout under another name (set per document)
 _capella_alias: Dict[str, str] = {}
 _sonata_alias: set = set()
@@ -268,6 +282,7 @@ def detect_capella_aliases(doc) -> None:
 
     _capella_alias.clear()
     _sonata_alias.clear()
+    _letter_alias.clear()
     use: Dict[str, collections.Counter] = {}
     for page in doc:
         for block in page.get_text("rawdict").get("blocks", []):
@@ -285,7 +300,10 @@ def detect_capella_aliases(doc) -> None:
         capella = c.get("\u00c2", 0) + c.get("\u2030", 0) + c.get("\u00c1", 0)
         # Sonata layout (Maestro, Opus... renamed): œ black head, ˙ half, w whole
         sonata = c.get("\u0153", 0) + c.get("\u02d9", 0) + c.get("w", 0) + c.get("\uf0cf", 0) + c.get("\uf0fa", 0)
-        if capella >= 0.25 * total and capella > sonata:
+        letters = c.get("k", 0) + c.get("j", 0)
+        if letters >= 0.4 * total and c.get("a", 0) + c.get("b", 0) + c.get("M", 0) > 0 and capella == 0:
+            _letter_alias.add(base)
+        elif capella >= 0.25 * total and capella > sonata:
             _capella_alias[base] = "capella3"
         elif sonata >= 0.25 * total:
             _sonata_alias.add(base)
@@ -321,6 +339,8 @@ def get_glyph_name(char: str, font_name: str = "") -> Optional[str]:
     # Legacy (pre-SMuFL) music fonts first: their codepoints overlap SMuFL ones
     if base.startswith(SONATA_LAYOUT_SPECIAL):
         return OPUS_SPECIAL_MAPPING.get(_symbol_char(char))
+    if base in _letter_alias:
+        return DRIVER_LETTER_MAPPING.get(char)
     if base.startswith(SONATA_LAYOUT_FONTS) or base in _sonata_alias:
         return OPUS_MAPPING.get(_symbol_char(char))
     if base in _glyph_names:
