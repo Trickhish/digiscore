@@ -972,6 +972,14 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                     staff_x_max=staff.x_max,
                     styled=styled_words,
                 )
+                # Under the page's last staff, a lone sparse line well below
+                # the staff is a footer (copyright, licence), not lyrics
+                if not below and len(lyric_lines) == 1:
+                    ln = lyric_lines[0]
+                    heads = sum(1 for n in staff_notes_raw if not n.get("is_rest"))
+                    if (ln.y - staff.bottom_y > 5.0 * staff.line_spacing
+                            and 3 * len(ln.syllables) < heads):
+                        lyric_lines = []
                 # Two-staff choir layout (SA / TB): words printed between the
                 # staves are sung by all voices when the lower staff has none
                 if (not lyric_lines and s_idx == 1 and len(sys.staves) == 2
