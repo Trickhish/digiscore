@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-SMUFL_PATH = Path(__file__).resolve().parent.parent / "smufl_glyphs.json"
+SMUFL_PATH = Path(__file__).resolve().parent / "smufl_glyphs.json"
 
 _SMUFL_BY_CODEPOINT: Dict[str, str] = {}
 _SMUFL_BY_NAME: Dict[str, str] = {}
