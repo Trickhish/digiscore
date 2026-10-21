@@ -152,6 +152,148 @@ def _pair_ties(parts: List[dict]) -> None:
                             n.pop(flag)
 
 
+def _staff_signature(staff: Staff, glyphs: List[dict]) -> tuple:
+    """(clef, staff size) of a staff, to recognise the same part in another system."""
+    cl = [g for g in glyphs if is_clef(g["name"])
+          and staff.x_min - 15 <= g["x"] <= staff.x_min + 60
+          and staff.top_y - 15 <= g["y"] <= staff.bottom_y + 15]
+    cl.sort(key=lambda g: g["x"])
+    name = cl[0]["name"] if cl else ""
+    sign = "F" if "fClef" in name else "C" if name.startswith("cClef") else "G"
+    return sign, "8vb" in name, round(staff.line_spacing, 1)
+
+
+def _align_staves(sig: List[tuple], full: List[tuple]) -> List[int]:
+    """
+    Order-preserving match of a system's staves to the fullest system's ones:
+    the part index of each staff. Staff size weighs most, then the clef; among
+    equal matches the most compact one (parts left out together) wins.
+    """
+    n, m = len(sig), len(full)
+
+    def score(a, b):
+        v = 0.0
+        if a[0] == b[0]:
+            v += 2
+            v += 1 if a[1] == b[1] else 0.5
+        # A part keeps its staff size; its clef may change between systems
+        if abs(a[2] - b[2]) < 0.15 * max(a[2], b[2]):
+            v += 3
+        return v
+
+    from functools import lru_cache
+
+    @lru_cache(maxsize=None)
+    def best(i, j, prev):
+        # (score, -gaps, choice list) for staves i.. mapped to template j..
+        if i == n:
+            return (0.0, 0, ())
+        if m - j < n - i:
+            return (-1e9, 0, ())
+        out = None
+        for k in range(j, m - (n - i) + 1):
+            sc, gp, ch = best(i + 1, k + 1, k)
+            gap = 0 if prev < 0 or k == prev + 1 else 1
+            cand = (sc + score(sig[i], full[k]), gp - gap, (k,) + ch)
+            if out is None or cand[:2] > out[:2]:
+                out = cand
+        return out
+
+    return list(best(0, 0, -1)[2])
+
+
+def _merge_split_systems(page_data: List[dict]) -> None:
+    """
+    A system whose staves are not joined by any line (a first system with
+    incipits, say) is read as single staves: a run of as many single staves as
+    the full systems have, aligned and spaced like them, is one system.
+    """
+    all_sys = [sy for pd in page_data for sy in pd["systems"]]
+    width = max(len(sy.staves) for sy in all_sys)
+    if width < 2:
+        return
+    gaps = [b.top_y - a.top_y for sy in all_sys if len(sy.staves) == width
+            for a, b in zip(sy.staves, sy.staves[1:])]
+    if not gaps:
+        return
+    gap = sorted(gaps)[len(gaps) // 2]
+    for pd in page_data:
+        out, i, systems = [], 0, pd["systems"]
+        while i < len(systems):
+            run = systems[i:i + width]
+            if (len(run) == width and all(len(sy.staves) == 1 for sy in run)
+                    and all(abs(a.staves[0].x_min - b.staves[0].x_min) < 2
+                            and abs(a.staves[0].x_max - b.staves[0].x_max) < 2
+                            and abs((b.staves[0].top_y - a.staves[0].top_y) - gap) < 0.25 * gap
+                            for a, b in zip(run, run[1:]))):
+                head = run[0]
+                head.staves = [sy.staves[0] for sy in run]
+                for k, st in enumerate(head.staves):
+                    st.part_idx = k
+                    st.system_idx = head.system_idx
+                head.bottom_y = head.staves[-1].bottom_y
+                out.append(head)
+                i += width
+                continue
+            out.append(systems[i])
+            i += 1
+        pd["systems"] = out
+
+
+def _assign_parts(page_data: List[dict]) -> None:
+    """Part index of each staff when systems leave some parts out."""
+    _merge_split_systems(page_data)
+    systems = [(sys, pd["glyphs"]) for pd in page_data for sys in pd["systems"]]
+    width = max(len(sys.staves) for sys, _ in systems)
+    if all(len(sys.staves) == width for sys, _ in systems):
+        return
+    full_sys, full_g = next((sy, g) for sy, g in systems if len(sy.staves) == width)
+    full = [_staff_signature(st, full_g) for st in full_sys.staves]
+    for sys, g in systems:
+        if len(sys.staves) == width:
+            continue
+        idx = _align_staves([_staff_signature(st, g) for st in sys.staves], full)
+        for st, k in zip(sys.staves, idx):
+            st.part_idx = k
+
+
+def _fill_absent_parts(parts, counters, next_sys, state) -> None:
+    """
+    Called before each system (and once at the end): the parts the previous
+    system left out get bar rests for each of its bars, so all parts keep the
+    same bar count.
+    """
+    prev = state.get("sys")
+    if prev is not None:
+        present = {st.part_idx for st in prev.staves}
+        n_bars = max((counters[k] - state["start"][k] for k in present), default=0)
+        ref = next((parts[k]["measures"][-n_bars:] for k in sorted(present)
+                    if n_bars and len(parts[k]["measures"]) >= n_bars), [])
+        for k, part in enumerate(parts):
+            if k in present or not ref:
+                continue
+            last = part["measures"][-1] if part["measures"] else None
+            for rm in ref:
+                beats, bt = rm.get("time_beats") or 4, rm.get("time_beat_type") or 4
+                dur = beats * 4.0 / bt
+                rest = {"is_rest": True, "measure_rest": True, "x": 0.0, "y": 0.0,
+                        "duration_quarters": dur, "type": "whole", "dot_count": 0, "lyrics": []}
+                part["measures"].append({
+                    "number": counters[k],
+                    "key_fifths": rm.get("key_fifths"),
+                    "time_beats": rm.get("time_beats"), "time_beat_type": rm.get("time_beat_type"),
+                    "time_symbol": rm.get("time_symbol"),
+                    "clef_sign": last.get("clef_sign") if last else None,
+                    "clef_line": last.get("clef_line") if last else None,
+                    "clef_octave": last.get("clef_octave") if last else None,
+                    "filled": True,
+                    "notes": [rest], "voices": [[[dict(rest, voice=1)]]],
+                })
+                counters[k] += 1
+    state["sys"] = next_sys
+    state["start"] = list(counters)
+
+
 def parse_vector_score(doc: pymupdf.Document) -> dict:
     """
     Parses a vector music PDF and returns the full score dictionary.
@@ -227,6 +369,9 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     if not all_systems:
         return {}
 
+    _assign_parts(page_data)
+    all_systems = [sy for pd in page_data for sy in pd["systems"]]
+
     # Determine number of parts across systems
     part_count = max(len(sys.staves) for sys in all_systems)
     
@@ -248,6 +393,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
 
     # Track measure numbers across systems for each part
     part_measure_counters = [1] * part_count
+    fill_state: dict = {}
 
     for p_info in page_data:
         p_idx = p_info["page_idx"]
@@ -271,6 +417,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         page_staves = p_info["staves"]
 
         for sys in p_info["systems"]:
+            _fill_absent_parts(parts, part_measure_counters, sys, fill_state)
             upper_lyrics = []
             for s_idx, staff in enumerate(sys.staves):
                 p_idx_for_staff = staff.part_idx
@@ -520,6 +667,15 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         m_dict["end_barline"] = {"repeat_direction": m.end_barline.repeat_direction}
 
                     parts[p_idx_for_staff]["measures"].append(m_dict)
+
+    _fill_absent_parts(parts, part_measure_counters, None, fill_state)
+    # Rest bars before a part's first staff take the clef it starts with
+    for part in parts:
+        first = next((m for m in part["measures"] if not m.get("filled")), None)
+        for m in part["measures"]:
+            if m.get("clef_sign") is None:
+                for k in ("clef_sign", "clef_line", "clef_octave"):
+                    m[k] = first.get(k) if first else ("G", 2, 0)[("clef_sign", "clef_line", "clef_octave").index(k)]
 
     # Detect title from top text on first page
     title = ""

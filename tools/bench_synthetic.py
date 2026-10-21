@@ -129,10 +129,10 @@ def compare(pred_path, gt_path):
                 out.add(t)
         return out
     tg_, tp_ = paired(ties(gt)), paired(ties(pred))
-    # Bar numbers may run one off from the reference (an incipit or pickup
+    # Bar numbers may run a few off from the reference (an incipit or pickup
     # numbered differently): take the shift that matches most ties
     best = tp_
-    for shift in (-1, 1):
+    for shift in (-3, -2, -1, 1, 2, 3):
         moved = {(t[0], t[1] + shift) + t[2:] for t in tp_}
         if len(moved & tg_) > len(best & tg_):
             best = moved

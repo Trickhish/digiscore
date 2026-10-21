@@ -173,7 +173,11 @@ def extract_lyrics_for_staff(
             continue  # measure numbers, fingering, etc.
 
         # Check if inside vertical lyric band and within horizontal staff extent
-        if staff_bottom_y + 3.0 <= y0 <= max_y and (staff_x_min - 20 <= x0 <= staff_x_max + 20):
+        # Below the staff: top clear of it, or (tightly spaced scores) the
+        # lower part of the text box well under the bottom line
+        below = staff_bottom_y + 3.0 <= y0 or (
+            y0 >= staff_bottom_y - 0.5 and y1 - staff_bottom_y >= 8.0)
+        if below and y0 <= max_y and (staff_x_min - 20 <= x0 <= staff_x_max + 20):
             if styled and tuple(w) in styled:
                 styled_band.append((x0, y0, x1, y1, text))
             band_words.append((x0, y0, x1, y1, text))

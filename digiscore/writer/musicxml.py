@@ -177,7 +177,9 @@ def _write_note(meas_elem, note: dict, divisions: int, voice: int, is_chord: boo
         etree.SubElement(note_elem, "chord")
 
     if is_rest:
-        etree.SubElement(note_elem, "rest")
+        r = etree.SubElement(note_elem, "rest")
+        if note.get("measure_rest"):
+            r.set("measure", "yes")
     else:
         pitch_elem = etree.SubElement(note_elem, "pitch")
         step_elem = etree.SubElement(pitch_elem, "step")
