@@ -106,8 +106,8 @@ Current results (mean share of notes right per score, worst part):
 |---|---|---|---|
 | `examples/synthetic` (vector) | 20 | 1.000 (20 perfect) | 1.000 |
 | `examples/source_and_pdf` | 3 | 1.000 | 1.000 |
-| `examples/cpdl` | 41 (40 readable) | 0.904 | 0.877 |
-| `examples/cpdl --choir` | 41 (40 readable) | 0.913 (9 perfect) | 0.877 |
+| `examples/cpdl` | 41 (40 readable) | 0.920 (10 perfect) | 0.904 |
+| `examples/cpdl --choir` | 41 (40 readable) | 0.929 (11 perfect) | 0.904 |
 | `examples/musetrainer` | 12 | 0.954 (7 perfect) | – |
 | `examples/synthetic --scan 130` (NoteLite) | 20 | 0.954 | – |
 
