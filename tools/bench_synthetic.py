@@ -111,10 +111,22 @@ def compare(pred_path, gt_path):
         per_part.append((gp.partName or f"P{i + 1}", round(notes[-1], 3), round(ratio(lp, lg), 3) if lg else None))
     res["notes"] = round(min(notes), 3)
     def ties(sc):
-        return [(pi, round(float(n.offset + n.getContextByClass("Measure").offset), 3), n.tie.type)
+        # Matched by part, bar, beat in the bar and pitch: a bar's absolute time
+        # shifts when an earlier bar is off, the tie itself is still right
+        return [(pi, n.getContextByClass("Measure").number, round(float(n.offset), 3),
+                 n.pitch.nameWithOctave, n.tie.type)
                 for pi, p in enumerate(sc.parts) for n in p.recurse().notes
                 if n.isNote and n.tie is not None and n.tie.type in ("start", "stop")]
-    tg_, tp_ = set(ties(gt)), set(ties(pred))
+    def paired(ts):
+        # A start without a stop on the next note of that pitch is no tie that
+        # can be seen on the page (some editors leave dangling tie starts)
+        out = set()
+        stops = {(t[0], t[3]) for t in ts if t[4] == "stop"}
+        for t in ts:
+            if t[4] == "stop" or (t[0], t[3]) in stops:
+                out.add(t)
+        return out
+    tg_, tp_ = paired(ties(gt)), paired(ties(pred))
     res["ties"] = f"{len(tg_ & tp_)}/{len(tg_)}" + (f" +{len(tp_ - tg_)}" if tp_ - tg_ else "")
     res["lyrics"] = round(min(lyrics), 3) if lyrics else None
     if octave_parts:

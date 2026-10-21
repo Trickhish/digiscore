@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import pymupdf
 
 from digiscore.vector.ties import find_arcs, mark_ties
-from digiscore.smufl import detect_mscore_flavour, get_glyph_name, is_clef, is_notehead, is_rest
+from digiscore.smufl import detect_capella_aliases, detect_named_fonts, glyph_trace, detect_mscore_flavour, get_glyph_name, is_clef, is_notehead, is_rest
 from digiscore.vector.duration import resolve_note_durations
 from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_tokens, match_syllables_to_notes, styled_tokens
 from digiscore.vector.measure import create_measures_for_staff, extract_barlines_for_staff
@@ -159,6 +159,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     all_systems: List[System] = []
     page_data = []
     detect_mscore_flavour(doc)
+    detect_capella_aliases(doc)
+    detect_named_fonts(doc)
 
     # 1. Extract staves and page elements per page
     for page_idx in range(len(doc)):
@@ -190,6 +192,20 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                                     "y": ch["origin"][1],
                                     "bbox": ch["bbox"],
                                 })
+
+        glyphs.extend(glyph_trace(page))
+
+        # Some programs (capella) draw shared symbols once per voice: the same
+        # glyph at the same spot twice would double key signatures and clefs
+        seen_g, unique = set(), []
+        for g in glyphs:
+            k = (g["name"], round(g["x"] * 2), round(g["y"] * 2))
+            # Two voices on one unison share a head legitimately
+            if k in seen_g and not g["name"].startswith("notehead"):
+                continue
+            seen_g.add(k)
+            unique.append(g)
+        glyphs = unique
 
         page_spacing = (
             sorted(s.line_spacing for s in staves)[len(staves) // 2] if staves else 5.0

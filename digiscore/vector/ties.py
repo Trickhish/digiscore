@@ -11,6 +11,21 @@ staff, and again from the start of the next system to its first note.
 from typing import List
 
 
+def _curved_outline(items) -> bool:
+    """A polyline that bends: its points stray from the chord between its ends."""
+    pts = [it[1] for it in items] + [items[-1][2]]
+    xs = [p.x for p in pts]
+    a = pts[xs.index(min(xs))]
+    b = pts[xs.index(max(xs))]
+    dx, dy = b.x - a.x, b.y - a.y
+    length = (dx * dx + dy * dy) ** 0.5
+    if length < 3:
+        return False
+    dev = max(abs((p.x - a.x) * dy - (p.y - a.y) * dx) / length for p in pts)
+    # Beams are parallelograms (4-5 corners); a tie bows by a good part of its length
+    return dev > 0.06 * length
+
+
 def find_arcs(drawings: List[dict]) -> List[tuple]:
     """(x0, y0, x1, y1) of filled curved shapes that may be ties or slurs."""
     arcs = []
@@ -18,8 +33,15 @@ def find_arcs(drawings: List[dict]) -> List[tuple]:
         if d.get("fill") is None:
             continue
         items = d.get("items", [])
-        if not items or not all(it[0] == "c" for it in items):
+        if not items:
             continue
+        if not all(it[0] == "c" for it in items):
+            # Printer drivers flatten curves into many short segments: a filled
+            # lens outline of a dozen or more lines that is not straight
+            if len(items) < 12 or not all(it[0] == "l" for it in items):
+                continue
+            if not _curved_outline(items):
+                continue
         r = d["rect"]
         if r.width < 3 or r.height > max(8.0, 0.35 * r.width):
             continue
