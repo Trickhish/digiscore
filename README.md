@@ -61,7 +61,7 @@ digiscore score.pdf -o output.musicxml --choir --split-voices
 two parts, named from the label (Soprano/Alto, Tenor/Bass). Stem-up notes go to
 the upper part and stem-down notes to the lower one; a chord gives its top and
 bottom notes, a single note is a unison for both, and words printed once for the
-staff are copied to both parts. Staves named for one voice keep their divisi.
+staff are copied to the lower part where it has none of its own. Staves named for one voice keep their divisi.
 On the ten SA/TB CPDL scores, the worst voice of each matches the reference
 voice to 94% on average. Vector PDFs only.
 

@@ -112,6 +112,10 @@ def _split_event(e: List[dict], upper: bool) -> List[dict]:
         return copy.deepcopy(notes[:1] if upper else [dict(n, lyrics=[]) for n in notes[:1]])
     pick = min(notes, key=lambda n: n.get("y", 0.0)) if upper else max(notes, key=lambda n: n.get("y", 0.0))
     out = copy.deepcopy(pick)
+    # The chord moves on as one event: both parts keep its length
+    for k in ("duration_quarters", "type", "dot_count", "tuplet"):
+        if k in notes[0]:
+            out[k] = notes[0][k]
     if not upper:
         out["lyrics"] = []
     # The lyric of a chord sits on one of its notes: the upper voice keeps it
@@ -138,8 +142,6 @@ def _split_measure(m: dict) -> Tuple[List[List[dict]], List[List[dict]]]:
 
 def _copy_words(up: List[List[dict]], low: List[List[dict]]) -> None:
     """Words printed once for the staff are sung by the lower voice too."""
-    if any(n.get("lyrics") for e in low for n in e):
-        return
     at = {}
     t = 0.0
     for e in up:
@@ -150,7 +152,7 @@ def _copy_words(up: List[List[dict]], low: List[List[dict]]) -> None:
     for e in low:
         if _sounding(e[0]):
             w = at.get(round(t, 3))
-            if w:
+            if w and not e[0].get("lyrics"):
                 e[0]["lyrics"] = copy.deepcopy(w)
         t += _dur(e)
 
@@ -165,9 +167,10 @@ def split_part(part: dict) -> Optional[Tuple[dict, dict]]:
     upper["name"], lower["name"] = names
     upper["labels"], lower["labels"] = [names[0]], [names[1]]
     upper["measures"], lower["measures"] = [], []
-    shared = _lyric_share(part) > 0 and not any(
-        n.get("lyrics") for m in part.get("measures", []) for v in (m.get("voices") or [])[1:]
-        for e in v for n in e if _sounding(n))
+    # Words printed once for the staff: the lower voice has (almost) none of its own
+    low_notes = [n for m in part.get("measures", []) for v in (m.get("voices") or [])[1:]
+                 for e in v for n in e if _sounding(n) and not n.get("unison_copy")]
+    shared = _lyric_share(part) > 0 and sum(1 for n in low_notes if n.get("lyrics")) <= 0.2 * max(1, len(low_notes))
     for m in part.get("measures", []):
         up, low = _split_measure(m)
         if shared:
