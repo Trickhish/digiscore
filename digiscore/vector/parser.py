@@ -13,8 +13,38 @@ from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_token
 from digiscore.vector.measure import create_measures_for_staff, extract_barlines_for_staff
 from digiscore.vector.pitch import calculate_pitch_from_y
 from digiscore.vector.staff import Staff, System, detect_staves_on_page, group_staves_into_systems
-from digiscore.vector.stems import extract_stems_and_beams
+from digiscore.vector.stems import extract_stems_and_beams, find_stem_for_note
 from digiscore.vector.voices import assign_voices
+
+
+def _head_staff(head: dict, staves: List[Staff], heads: List[dict], stems) -> Optional[Staff]:
+    """
+    The staff of a notehead: the nearest, except a head between two staves that
+    shares its stem with heads lying inside the other staff (a chord written
+    across the gap belongs to the staff holding most of it).
+    """
+    near = nearest_staff(head, staves)
+    if near is None or near.top_y <= head["y"] <= near.bottom_y:
+        return near
+    sp = near.line_spacing
+    stem = find_stem_for_note(head, stems, sp)
+    if stem is None:
+        return near
+    votes: Dict[int, int] = {}
+    for h in heads:
+        if h is head or abs(h["x"] - head["x"]) > 0.5 * sp:
+            continue
+        if not (stem.y0 - sp <= h["y"] <= stem.y1 + sp):
+            continue
+        st = nearest_staff(h, staves)
+        if st is not None and st.top_y <= h["y"] <= st.bottom_y:
+            votes[id(st)] = votes.get(id(st), 0) + 1
+    if votes:
+        best = max(votes, key=votes.get)
+        for st in staves:
+            if id(st) == best:
+                return st
+    return near
 
 
 def nearest_staff(glyph: dict, staves: List[Staff]) -> Optional[Staff]:
@@ -150,6 +180,97 @@ def _pair_ties(parts: List[dict]) -> None:
                     for flag in ("tie_start", "tie_stop"):
                         if n.get(flag) and (id(n), flag) not in ok:
                             n.pop(flag)
+
+
+def _resolve_grace(notes: List[dict], sp: float) -> None:
+    """
+    Small heads are grace notes only when packed tightly in front of a
+    full-size note (directly or through other grace notes); small notes spaced
+    out on their own are cue notes, which take their time.
+    """
+    heads = sorted((n for n in notes if not n.get("is_rest")), key=lambda n: n["x"])
+    for n in heads:
+        n["small"] = bool(n.get("grace"))
+    xs = sorted({round(n["x"], 1) for n in heads})
+    by_x: Dict[float, List[dict]] = {}
+    for n in heads:
+        by_x.setdefault(round(n["x"], 1), []).append(n)
+    grace_x: Dict[float, bool] = {}
+    for i in range(len(xs) - 1, -1, -1):
+        x = xs[i]
+        group = by_x[x]
+        if not all(n.get("grace") for n in group):
+            grace_x[x] = False
+            continue
+        ok = False
+        if i + 1 < len(xs):
+            nx = xs[i + 1]
+            d = nx - x
+            nxt_small = all(n.get("small") for n in by_x[nx])
+            # Led into a full-size note, directly or through a tight run of grace notes
+            ok = (not nxt_small and d < 4.0 * sp) or (grace_x.get(nx, False) and d < 2.5 * sp)
+        grace_x[x] = ok
+        for n in group:
+            n["grace"] = ok
+
+
+def _settle_grace(notes: List[dict], bar_len: float, sp: float, mid: float) -> None:
+    """
+    Candidate grace notes become grace notes (no time) when the bar is too
+    long with them counted; otherwise they are cue notes and keep their value.
+    """
+    cand = [n for n in notes if n.get("grace")]
+    if not cand:
+        return
+    for n in cand:
+        n["grace"] = False
+    longest = max((sum(e[0].get("duration_quarters", 0.0) for e in v)
+                   for v in assign_voices(notes, sp, mid)), default=0.0)
+    if longest <= bar_len + 1e-6:
+        return
+    for n in cand:
+        n["grace"] = True
+        n["duration_quarters"] = 0.0
+        n["dot_count"] = 0
+
+
+def _apply_ottavas(staff: Staff, notes: List[dict], glyphs: List[dict], drawings: List[dict]) -> None:
+    """
+    8va / 8vb lines: the "8" glyph, then a dashed line to the end of the
+    passage. Heads of this staff under (8va) or over (8vb) it move an octave.
+    """
+    sp = staff.line_spacing
+    for g in glyphs:
+        name = g["name"]
+        if not name.startswith("ottava"):
+            continue
+        x, y = g["x"], g["y"]
+        # A bare "8" says which by where it stands: over the staff 8va, under 8vb
+        if staff.top_y - 8 * sp < y < staff.top_y:
+            below = "Bassa" in name
+        elif staff.bottom_y < y < staff.bottom_y + 8 * sp:
+            below = True
+        else:
+            continue
+        if not staff.x_min - 5 <= x <= staff.x_max + 5:
+            continue
+        x_end = x + 3 * sp
+        for d in drawings:
+            items = d.get("items", [])
+            if len(items) != 1 or items[0][0] != "l":
+                continue
+            p1, p2 = items[0][1], items[0][2]
+            if abs(p1.y - p2.y) > 0.5 or not d.get("dashes") or d.get("dashes") in ("[] 0",):
+                continue
+            lx0, lx1 = min(p1.x, p2.x), max(p1.x, p2.x)
+            if 0 <= lx0 - x < 4 * sp and abs(p1.y - y) < 3 * sp:
+                x_end = max(x_end, lx1)
+        # A closing hook after the dashes may be a separate short vertical line
+        for n in notes:
+            if n.get("is_rest") or n.get("octave") is None:
+                continue
+            if x - 1 <= n["x"] <= x_end + 1:
+                n["octave"] += -1 if below else 1
 
 
 def _staff_signature(staff: Staff, glyphs: List[dict]) -> tuple:
@@ -330,6 +451,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                                     "name": gname,
                                     "char": ch["c"],
                                     "font": font,
+                                    "size": span.get("size", 0.0),
                                     "x": ch["origin"][0],
                                     "y": ch["origin"][1],
                                     "bbox": ch["bbox"],
@@ -407,6 +529,9 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
 
         # Separate glyph types
         noteheads = [g for g in glyphs if is_notehead(g["name"])]
+        # Grace notes: heads clearly smaller than the page's usual head size
+        head_sizes = sorted(g.get("size", 0.0) for g in noteheads)
+        usual_head = head_sizes[len(head_sizes) // 2] if head_sizes else 0.0
         rests = [g for g in glyphs if is_rest(g["name"])]
         clefs = [g for g in glyphs if is_clef(g["name"])]
         accidentals = [g for g in glyphs if "accidental" in g["name"].lower()]
@@ -520,7 +645,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 staff_notes_raw = []
 
                 for nh in noteheads:
-                    if nearest_staff(nh, page_staves) is not staff:
+                    if _head_staff(nh, page_staves, noteheads, stems) is not staff:
                         continue
                     if staff.top_y - 25 <= nh["y"] <= staff.bottom_y + 25 and staff.x_min - 5 <= nh["x"] <= staff.x_max + 5:
                         staff_notes_raw.append({
@@ -529,12 +654,15 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                             "x": nh["x"],
                             "y": nh["y"],
                             "bbox": nh["bbox"],
+                            "grace": bool(usual_head and 0 < nh.get("size", usual_head) < 0.8 * usual_head),
                         })
 
                 for r in rests:
                     if nearest_staff(r, page_staves) is not staff:
                         continue
-                    if staff.top_y - 15 <= r["y"] <= staff.bottom_y + 15 and staff.x_min - 5 <= r["x"] <= staff.x_max + 5:
+                    # Rests of an upper or lower voice may sit well outside the staff
+                    r_pad = max(15.0, 4.0 * staff.line_spacing)
+                    if staff.top_y - r_pad <= r["y"] <= staff.bottom_y + r_pad and staff.x_min - 5 <= r["x"] <= staff.x_max + 5:
                         staff_notes_raw.append({
                             "is_rest": True,
                             "glyph_name": r["name"],
@@ -555,6 +683,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                     dots=dots,
                     line_spacing=staff.line_spacing,
                 )
+
+                _resolve_grace(staff_notes_raw, staff.line_spacing)
 
                 # Next staff top y for lyrics band
                 below = [s.top_y for s in page_staves if s.top_y > staff.bottom_y + 1]
@@ -581,7 +711,11 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 # Extract barlines and create measures
                 barlines = extract_barlines_for_staff(
                     drawings, staff, repeat_dots=repeat_dots,
-                    noteheads=[n for n in staff_notes_raw if not n["is_rest"]],
+                    # Any head of the page: a stem may cross into this staff
+                    # from a note of the staff above or below
+                    noteheads=[n for n in staff_notes_raw if not n["is_rest"]] + [
+                        {"x": h["x"], "y": h["y"], "bbox": h["bbox"]} for h in noteheads
+                        if staff.top_y - 12 * staff.line_spacing <= h["y"] <= staff.bottom_y + 12 * staff.line_spacing],
                 )
                 measures = create_measures_for_staff(staff, barlines, staff_notes_raw)
 
@@ -626,6 +760,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         n["accidental"] = pitch.accidental
 
                 # Ties (filled arcs joining two noteheads of the same pitch)
+                _apply_ottavas(staff, staff_notes_raw, glyphs, drawings)
+
                 mark_ties(staff, staff_notes_raw, tie_arcs)
 
                 # Time signature changes inside the staff (stacked digit pairs after the header)
@@ -656,6 +792,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         "clef_octave": staff.clef_octave,
                         "notes": m.notes,
                     }
+                    _settle_grace(m.notes, cur_beats * 4.0 / cur_beat_type, staff.line_spacing,
+                                  (staff.top_y + staff.bottom_y) / 2)
                     voices = assign_voices(
                         m.notes, staff.line_spacing, (staff.top_y + staff.bottom_y) / 2
                     )

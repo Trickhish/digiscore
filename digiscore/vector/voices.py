@@ -43,6 +43,19 @@ def _stem_dir(event: List[dict]) -> Optional[str]:
     return event[0].get("stem_dir")
 
 
+def _shared_stem(e: List[dict], events: List[List[dict]]) -> bool:
+    """
+    A chord on one stem is read as both voices only when no other event of the
+    other stem direction stands at its x (then that event is the other voice).
+    """
+    d = _stem_dir(e)
+    x = _x(e)
+    other = "down" if d == "up" else "up"
+    sp = abs(e[0]["bbox"][2] - e[0]["bbox"][0]) if e[0].get("bbox") else 6.0
+    return not any(
+        _stem_dir(o) == other and abs(_x(o) - x) < 1.5 * sp for o in events if o is not e)
+
+
 def assign_voices(notes: List[dict], line_spacing: float, staff_mid_y: float) -> List[List[List[dict]]]:
     """
     Returns a list of voices, each a list of events (an event is a list of notes,
@@ -65,7 +78,7 @@ def assign_voices(notes: List[dict], line_spacing: float, staff_mid_y: float) ->
     v2: List[List[dict]] = []
     for e in events:
         d = _stem_dir(e)
-        if d in ("up", "down") and len(e) >= 2:
+        if d in ("up", "down") and len(e) >= 2 and _shared_stem(e, events):
             # Both voices sharing one stem: top note(s) to voice 1, bottom to voice 2
             e_sorted = sorted(e, key=lambda n: n["y"])
             half = len(e_sorted) // 2
@@ -90,6 +103,19 @@ def assign_voices(notes: List[dict], line_spacing: float, staff_mid_y: float) ->
                 v1.append(hi)
             else:
                 v2.append(lo)
+    # A rest at the same x as a note of the voice it was put in belongs to the
+    # other voice (rests of the lower voice are sometimes drawn high, and so on)
+    def _move_clashing(src, dst):
+        for e in list(src):
+            if not e[0].get("is_rest"):
+                continue
+            if any(not o[0].get("is_rest") and abs(_x(o) - _x(e)) < tol for o in src if o is not e) \
+                    and not any(abs(_x(o) - _x(e)) < tol for o in dst):
+                src.remove(e)
+                dst.append(e)
+                dst.sort(key=_x)
+    _move_clashing(v1, v2)
+    _move_clashing(v2, v1)
     if not v2:
         return [v1]
     if not v1:
@@ -98,7 +124,7 @@ def assign_voices(notes: List[dict], line_spacing: float, staff_mid_y: float) ->
 
 
 def _dur(event: List[dict]) -> float:
-    return max(n.get("duration_quarters", 1.0) for n in event)
+    return max(n.get("duration_quarters", 1.0) for n in event)  # 0 for grace notes
 
 
 def _x(event: List[dict]) -> float:

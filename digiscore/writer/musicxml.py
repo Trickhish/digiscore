@@ -136,7 +136,7 @@ def build_musicxml(
                 if v_idx > 0:
                     prev_len = sum(
                         max(1, int(round(ev[0].get("duration_quarters", 1.0) * divisions)))
-                        for ev in voices[v_idx - 1]
+                        for ev in voices[v_idx - 1] if not ev[0].get("grace")
                     )
                     backup = etree.SubElement(meas_elem, "backup")
                     etree.SubElement(backup, "duration").text = str(prev_len)
@@ -173,6 +173,9 @@ def _write_note(meas_elem, note: dict, divisions: int, voice: int, is_chord: boo
     if note.get("hidden"):
         note_elem.set("print-object", "no")
     is_rest = note.get("is_rest", False)
+    grace = note.get("grace") and not is_rest
+    if grace:
+        etree.SubElement(note_elem, "grace", slash="yes" if note.get("type") == "eighth" else "no")
     if is_chord:
         etree.SubElement(note_elem, "chord")
 
@@ -194,8 +197,9 @@ def _write_note(meas_elem, note: dict, divisions: int, voice: int, is_chord: boo
     # Duration in divisions
     quarters = note.get("duration_quarters", 1.0)
     dur_divs = max(1, int(round(quarters * divisions)))
-    d_elem = etree.SubElement(note_elem, "duration")
-    d_elem.text = str(dur_divs)
+    if not grace:
+        d_elem = etree.SubElement(note_elem, "duration")
+        d_elem.text = str(dur_divs)
     tie_types = [t for t in ("stop", "start") if note.get(f"tie_{t}") and not is_rest]
     for t in tie_types:
         etree.SubElement(note_elem, "tie", type=t)
