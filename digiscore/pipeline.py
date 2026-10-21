@@ -4,6 +4,7 @@ Detects score type (vector vs scanned/raster), routes to the appropriate engine,
 and enriches the resulting MusicXML with AI metadata.
 """
 
+import re
 import os
 import warnings
 import tempfile
@@ -89,6 +90,11 @@ def read_musicxml_from_file(file_path: str) -> str:
         raise ValueError(f"No valid XML rootfile found in MXL archive: {file_path}")
     else:
         return p.read_text(encoding="utf-8")
+
+
+def _has_time(xml_content: str) -> bool:
+    """A <time> element (not <time-modification>) anywhere in the score."""
+    return re.search(r"<time[\s>]", xml_content) is not None
 
 
 def _same_bar_length(a: str, b: str) -> bool:
@@ -178,7 +184,7 @@ def convert_score(
 
             # The engine read a different meter (6/8 for 9/8, 6/4 for 12/8...): its
             # rhythm is built on the wrong bar length, so redo it with ours
-            if image_ts and os.path.isfile(tmp_book) and "<time" in xml_content:
+            if image_ts and os.path.isfile(tmp_book) and _has_time(xml_content):
                 try:
                     from digiscore.omr.inject_time import omr_time_signatures, replace_header_times
                     found = omr_time_signatures(tmp_book)
@@ -193,7 +199,7 @@ def convert_score(
             # If the OMR missed the time signature, use ours (or ask the AI, or infer
             # it from the bar lengths), write it into the project and let NoteLite
             # redo the rhythm
-            if os.path.isfile(tmp_book) and "<time" not in xml_content:
+            if os.path.isfile(tmp_book) and not _has_time(xml_content):
                 try:
                     from digiscore.omr.inject_time import (
                         detect_time_signature, guess_time_from_durations, inject_time_into_omr,

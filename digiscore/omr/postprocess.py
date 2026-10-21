@@ -139,7 +139,15 @@ def _match_by_usage(ids: List[str], parts) -> Dict[str, str]:
     if n % 2 == 0:
         half = n // 2
         first, second = ids[:half], ids[half:]
-        if not any(any(x and y for x, y in zip(usage[a], usage[b])) for a, b in zip(first, second)):
+
+        def overlap(a, b):
+            return sum(1 for x, y in zip(usage[a], usage[b]) if x and y)
+
+        # Exclusive usage, allowing a stray bar or two (a note the engine also
+        # put in the other part's empty bar, e.g. the whole note we restored)
+        n_meas = max((len(u) for u in usage.values()), default=0)
+        if all(overlap(a, b) <= (1 if n_meas >= 12 else 0) for a, b in zip(first, second)) and \
+                all(sum(usage[a]) and sum(usage[b]) for a, b in zip(first, second)):
             return {b: a for a, b in zip(first, second)}
 
     # Sparse parts (music in a few bars only) stand in for main parts in some
