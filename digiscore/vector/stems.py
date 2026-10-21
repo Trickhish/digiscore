@@ -70,6 +70,7 @@ def extract_stems_and_beams(drawings, line_spacing: float = 5.0) -> Tuple[List[S
     sp = line_spacing
     stems: List[Stem] = []
     beams: List[Beam] = []
+    hatch: List[tuple] = []
     for d in drawings:
         r = d["rect"]
         dtype = d.get("type", "")
@@ -78,8 +79,12 @@ def extract_stems_and_beams(drawings, line_spacing: float = 5.0) -> Tuple[List[S
         # Stroked vertical line
         if "s" in dtype and len(items) == 1 and items[0][0] == "l":
             p1, p2 = items[0][1], items[0][2]
-            if abs(p1.x - p2.x) < 0.3 and 1.2 * sp <= abs(p1.y - p2.y) <= 8.0 * sp:
+            if abs(p1.x - p2.x) < 0.3 and 0.3 * sp <= abs(p1.y - p2.y) <= 8.0 * sp:
                 stems.append(Stem(x=(p1.x + p2.x) / 2, y0=min(p1.y, p2.y), y1=max(p1.y, p2.y)))
+            elif abs(p2.x - p1.x) >= 0.8 * sp and abs(p2.y - p1.y) < abs(p2.x - p1.x):
+                if p1.x > p2.x:
+                    p1, p2 = p2, p1
+                hatch.append((p1.x, p1.y, p2.x, p2.y, d.get("width") or 0.0))
             continue
 
         if "f" not in dtype:
@@ -88,7 +93,7 @@ def extract_stems_and_beams(drawings, line_spacing: float = 5.0) -> Tuple[List[S
             continue  # page backgrounds, brackets
 
         # Thin filled rectangle used as a stem
-        if r.width < 0.3 * sp and 1.2 * sp <= r.height <= 8.0 * sp:
+        if r.width < 0.3 * sp and 0.3 * sp <= r.height <= 8.0 * sp:
             stems.append(Stem(x=(r.x0 + r.x1) / 2, y0=r.y0, y1=r.y1))
             continue
 
@@ -105,7 +110,53 @@ def extract_stems_and_beams(drawings, line_spacing: float = 5.0) -> Tuple[List[S
         thick = yr[1] - yr[0]
         if 0.25 * sp <= thick <= 0.9 * sp:
             beams.append(b)
-    return stems, beams
+    beams.extend(_hatched_beams(hatch, sp))
+    return [t for t in _chain_stems(stems) if 1.2 * sp <= t.y1 - t.y0 <= 8.5 * sp], beams
+
+
+def _chain_stems(stems: List[Stem]) -> List[Stem]:
+    """
+    Joins stem pieces on one line that touch end to end (some programs draw a
+    chord's stem from head to head); drops strokes repeated side by side.
+    """
+    out: List[Stem] = []
+    for st in sorted(stems, key=lambda t: (t.y0, t.x)):
+        for o in out:
+            if abs(o.x - st.x) < 0.6 and st.y0 <= o.y1 + 0.3 and st.y1 >= o.y0 - 0.3:
+                o.y0, o.y1 = min(o.y0, st.y0), max(o.y1, st.y1)
+                break
+        else:
+            out.append(Stem(x=st.x, y0=st.y0, y1=st.y1))
+    return out
+
+
+def _hatched_beams(lines: List[tuple], sp: float) -> List[Beam]:
+    """
+    Some programs (Mozart) fill a beam with a stack of thin parallel strokes:
+    lines with the same ends in x, each a little lower than the last.
+    """
+    groups = {}
+    for ln in lines:
+        groups.setdefault((round(ln[0], 1), round(ln[2], 1)), []).append(ln)
+    out = []
+    for g in groups.values():
+        g.sort(key=lambda ln: ln[1])
+        run = [g[0]]
+        for ln in g[1:] + [None]:
+            prev = run[-1]
+            if ln is not None and ln[1] - prev[1] <= 0.3 and abs((ln[3] - ln[1]) - (prev[3] - prev[1])) < 0.1:
+                run.append(ln)
+                continue
+            if len(run) >= 3:
+                a, b = run[0], run[-1]
+                w = a[4] / 2
+                thick = b[1] - a[1] + 2 * w
+                if 0.25 * sp <= thick <= 0.9 * sp:
+                    pts = [(a[0], a[1] - w), (a[2], a[3] - w), (b[2], b[3] + w), (b[0], b[1] + w)]
+                    out.append(Beam(points=pts, x0=a[0], x1=a[2]))
+            if ln is not None:
+                run = [ln]
+    return out
 
 
 def find_stem_for_note(note: dict, stems: List[Stem], line_spacing: float) -> Optional[Stem]:

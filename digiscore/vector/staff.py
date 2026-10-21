@@ -65,13 +65,14 @@ def detect_staves_on_page(page, page_idx: int) -> List[Staff]:
                 if r.height < 2.0 and r.width > 4:
                     h_segments.append((r.x0, r.x1, round((r.y0 + r.y1) / 2, 2)))
 
-    # Cluster segments by y coordinate (within 0.5 pt of the previous one)
+    # Cluster segments by y coordinate (within 0.5 pt of the previous one; lines
+    # and beams may be hatched with strokes a fraction of a point apart)
     y_lines = defaultdict(list)
     cur_key, prev_y = None, None
     for x0, x1, y in sorted(h_segments, key=lambda s: s[2]):
         if prev_y is None or y - prev_y >= 0.5:
             cur_key = y
-        y_lines[cur_key].append((x0, x1))
+        y_lines[cur_key].append((x0, x1, y))
         prev_y = y
 
     # Merge touching segments for each line; a staff line is one long continuous run
@@ -80,14 +81,17 @@ def detect_staves_on_page(page, page_idx: int) -> List[Staff]:
     for y, segs in y_lines.items():
         segs.sort()
         runs = []
-        for x0, x1 in segs:
+        for x0, x1, sy in segs:
             if runs and x0 <= runs[-1][1] + 1.0:
                 runs[-1][1] = max(runs[-1][1], x1)
+                if x1 - x0 > runs[-1][3]:
+                    runs[-1][2], runs[-1][3] = sy, x1 - x0
             else:
-                runs.append([x0, x1])
+                runs.append([x0, x1, sy, x1 - x0])
         best = max(runs, key=lambda r: r[1] - r[0])
         if best[1] - best[0] > 50:
-            merged_lines.append(StaffLine(x0=best[0], x1=best[1], y=y))
+            # y of the run's longest piece: the staff line, not a beam touching it
+            merged_lines.append(StaffLine(x0=best[0], x1=best[1], y=best[2]))
 
     merged_lines.sort(key=lambda l: l.y)
     staves = _find_staves([l for l in merged_lines if l.x1 - l.x0 > 120], page_idx)

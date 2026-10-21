@@ -5,6 +5,7 @@ glyph tables and mapping utilities.
 
 import json
 from pathlib import Path
+import re
 from typing import Dict, Optional, Tuple
 
 SMUFL_PATH = Path(__file__).resolve().parent / "smufl_glyphs.json"
@@ -164,6 +165,17 @@ DRIVER_LETTER_MAPPING: Dict[str, str] = {
     **_TIME_DIGITS,
 }
 _letter_alias: set = set()
+_cp437_alias: set = set()
+
+
+def _cp437_mac(char: str) -> str:
+    """The Mac Roman character of a byte the text layer decoded as code page 437."""
+    if ord(char) < 0x80:
+        return char
+    try:
+        return char.encode("cp437").decode("mac_roman")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return char
 
 # Fonts known to be capella / Sonata-layout under another name (set per document)
 _capella_alias: Dict[str, str] = {}
@@ -208,6 +220,20 @@ FETA_NAMES: Dict[str, str] = {
     "five": "timeSig5", "six": "timeSig6", "seven": "timeSig7", "eight": "timeSig8", "nine": "timeSig9",
 }
 
+# Mozart (Mozart Music Software) music font, private-use codes
+MOZART_MAPPING: Dict[str, str] = {
+    "\ue010": "gClef", "\ue011": "fClef",
+    **{chr(0xE020 + d): f"timeSig{d}" for d in range(10)},
+    "\ue032": "restHalf", "\ue031": "restWhole",
+    "\ue033": "restQuarter", "\ue034": "rest8th", "\ue035": "rest16th",
+    "\ue041": "noteheadWhole", "\ue042": "noteheadHalf", "\ue043": "noteheadBlack",
+    "\ue080": "augmentationDot",
+    "\ue0a1": "accidentalSharp", "\ue0a2": "accidentalNatural", "\ue0a3": "accidentalFlat",
+    "\ue0ab": "accidentalFlat",
+}
+# Embedded fonts found to be Mozart under an anonymous name (CIDFont+F1)
+_mozart_alias: set = set()
+
 # font name -> {char: glyph name}, from the embedded font's encoding (set per document)
 _glyph_names: Dict[str, Dict[str, str]] = {}
 
@@ -220,9 +246,20 @@ def detect_named_fonts(doc) -> None:
     import io
 
     _glyph_names.clear()
+    _mozart_alias.clear()
     for page in doc:
         for f in page.get_fonts():
             base = _base_font(f[3])
+            if f[1] == "ttf" and f[3].startswith("CIDFont") and base not in _mozart_alias:
+                try:
+                    from fontTools.ttLib import TTFont
+                    _, _, _, buf = doc.extract_font(f[0])
+                    names = " ".join(str(n) for n in TTFont(io.BytesIO(buf))["name"].names)
+                    if "Mozart" in names:
+                        _mozart_alias.add(base)
+                except Exception:
+                    pass
+                continue
             if not base.startswith(("Emmentaler", "Feta", "feta")) or base in _glyph_names:
                 continue
             try:
@@ -283,17 +320,29 @@ def detect_capella_aliases(doc) -> None:
     _capella_alias.clear()
     _sonata_alias.clear()
     _letter_alias.clear()
+    _cp437_alias.clear()
     use: Dict[str, collections.Counter] = {}
     for page in doc:
         for block in page.get_text("rawdict").get("blocks", []):
             for line in block.get("lines", []):
                 for span in line.get("spans", []):
                     base = _base_font(span.get("font", ""))
-                    if not base.startswith("TT"):
+                    if not base.startswith("TT") and not re.fullmatch(r"T\d+", base):
                         continue
                     c = use.setdefault(base, collections.Counter())
                     c.update(ch["c"] for ch in span.get("chars", []))
+    # Type3 fonts named T1, T2... whose text layer reads the Mac Roman bytes as
+    # code page 437 (Sonata œ 0xCF -> ╧): a document with one has them all so
     for base, c in use.items():
+        if not re.fullmatch(r"T\d+", base):
+            continue
+        conv = sum(v for k, v in c.items() if _cp437_mac(k) in ("\u0153", "\u02d9"))
+        if conv >= 10 and conv >= 0.25 * sum(c.values()):
+            _cp437_alias.update(b for b in use if re.fullmatch(r"T\d+", b))
+            break
+    for base, c in use.items():
+        if base in _cp437_alias:
+            continue
         total = sum(v for k, v in c.items() if not k.isspace())
         if total < 10:
             continue
@@ -339,8 +388,12 @@ def get_glyph_name(char: str, font_name: str = "") -> Optional[str]:
     # Legacy (pre-SMuFL) music fonts first: their codepoints overlap SMuFL ones
     if base.startswith(SONATA_LAYOUT_SPECIAL):
         return OPUS_SPECIAL_MAPPING.get(_symbol_char(char))
+    if base in _cp437_alias:
+        return OPUS_MAPPING.get(_cp437_mac(char))
     if base in _letter_alias:
         return DRIVER_LETTER_MAPPING.get(char)
+    if base in _mozart_alias:
+        return MOZART_MAPPING.get(char)
     if base.startswith(SONATA_LAYOUT_FONTS) or base in _sonata_alias:
         return OPUS_MAPPING.get(_symbol_char(char))
     if base in _glyph_names:

@@ -28,6 +28,8 @@ from digiscore.pipeline import convert_score  # noqa: E402
 def tokens(part):
     out = []
     for n in part.flatten().notesAndRests:
+        if n.isRest and n.style.hideObjectOnPrint:
+            continue  # invisible voice filler: nothing on the page to read
         if n.isRest:
             p = "R"
         elif n.isChord:
