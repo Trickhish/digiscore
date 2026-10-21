@@ -103,10 +103,16 @@ def resolve_note_durations(
         bbox = n.get("bbox")
         right = bbox[2] if bbox else n["x"] + line_spacing
         ny = n["y"]
+        def _near(d, m):
+            mb = m.get("bbox")
+            mr = mb[2] if mb else m["x"] + line_spacing
+            return 0 < d["x"] - mr < 2.2 * line_spacing and -0.8 * line_spacing < m["y"] - d["y"] < 0.8 * line_spacing
+
         dot_count = sum(
             1 for d in dots
-            if 0 < d["x"] - right < 2.2 * line_spacing
-            and -0.8 * line_spacing < ny - d["y"] < 0.8 * line_spacing
+            if _near(d, n)
+            # A rest sharing its place with a note leaves the dot to the note
+            and not (is_rest and any(not m.get("is_rest") and m is not n and _near(d, m) for m in notes))
         )
         dot_count = min(dot_count, 2)
         n["dot_count"] = dot_count
