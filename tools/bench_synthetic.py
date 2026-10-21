@@ -111,6 +111,7 @@ def main():
     ap.add_argument("--engine", default="auto")
     ap.add_argument("--only")
     ap.add_argument("--ai", action="store_true")
+    ap.add_argument("--keep", help="directory to keep the converted files in")
     a = ap.parse_args()
     rows = []
     with tempfile.TemporaryDirectory(prefix="bench_") as tmp:
@@ -121,7 +122,9 @@ def main():
             pdf = gt[:-4] + ".pdf"
             if a.scan:
                 pdf = fake_scan(pdf, os.path.join(tmp, f"{stem}.pdf"), a.scan)
-            out = os.path.join(tmp, f"{stem}.musicxml")
+            out_dir = a.keep or tmp
+            os.makedirs(out_dir, exist_ok=True)
+            out = os.path.join(out_dir, f"{stem}.musicxml")
             try:
                 convert_score(pdf, out, engine=a.engine, use_ai=a.ai)
                 r = compare(out, gt)

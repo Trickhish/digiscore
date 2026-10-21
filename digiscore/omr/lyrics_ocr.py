@@ -21,7 +21,7 @@ import pymupdf
 from lxml import etree
 from PIL import Image
 
-from digiscore.omr.book import Chord, SheetInfo, StaffInSystem
+from digiscore.omr.book import Chord, LyricLine, SheetInfo, StaffInSystem
 
 LSTM_TESSDATA_DIRS = [
     os.environ.get("DIGISCORE_LSTM_TESSDATA"),
@@ -348,6 +348,55 @@ def assign_to_chords(syls: List[OcrSyllable], chords: List[Chord], interline: fl
     return out
 
 
+def _lyric_line_offsets(sheets: List[SheetInfo]) -> List[Tuple[float, float]]:
+    """Typical (top, bottom) of each verse line below the staff bottom, in interlines."""
+    per_verse: Dict[int, List[Tuple[float, float]]] = {}
+    for sheet in sheets:
+        for system in sheet.systems:
+            for staff in system.staves:
+                il = staff.interline or 1.0
+                for k, ll in enumerate(sorted(staff.lyric_lines, key=lambda l: l.y0)):
+                    top, bot = (ll.y0 - staff.bottom) / il, (ll.y1 - staff.bottom) / il
+                    if 0 < top < 8:
+                        per_verse.setdefault(k, []).append((top, bot))
+    out = []
+    for k in sorted(per_verse):
+        v = per_verse[k]
+        if len(v) < 2:
+            break
+        tops = sorted(t for t, _ in v)
+        bots = sorted(b for _, b in v)
+        out.append((tops[len(tops) // 2], bots[len(bots) // 2]))
+    return out
+
+
+def _find_missing_lyric_lines(img: Image.Image, staff: StaffInSystem, offsets) -> List[LyricLine]:
+    """
+    Lyric lines under a staff where the engine found none: a band at the usual
+    offset with enough dark text pixels, and clear of the next staff.
+    """
+    import numpy as np
+
+    il = staff.interline
+    x0 = int(staff.left or (staff.measures[0].left if staff.measures else 0))
+    x1 = int(staff.measures[-1].right) if staff.measures else img.width
+    if x1 - x0 < 4 * il:
+        return []
+    lines = []
+    for k, (t, b) in enumerate(offsets):
+        y0 = int(staff.bottom + t * il)
+        y1 = int(staff.bottom + b * il)
+        if y1 <= y0 or y1 >= img.height:
+            break
+        band = np.asarray(img.crop((x0, y0, x1, y1)).convert("L"))
+        ink = (band < 128).mean()
+        # Text lines are a few percent ink; empty paper is near zero
+        if ink < 0.01:
+            break
+        lines.append(LyricLine(f"auto{staff.staff_id}-{k}", k + 1, x0, y0, x1, y1))
+    return lines
+
+
 def relyric(
     xml_content: str,
     sheets: List[SheetInfo],
@@ -381,8 +430,14 @@ def relyric(
         zoom = sheet.width / page.rect.width
         img = _page_image(page, zoom)
 
+        # Where lyric lines sit relative to their staff, from the staves the engine
+        # did find them on: used to look for lines it missed under other staves
+        offsets = _lyric_line_offsets(sheets)
+
         for system in sheet.systems:
             for staff in system.staves:
+                if not staff.lyric_lines and offsets:
+                    staff.lyric_lines = _find_missing_lyric_lines(img, staff, offsets)
                 if not staff.lyric_lines:
                     continue
                 chords = [c for m in staff.measures for c in m.chords]
