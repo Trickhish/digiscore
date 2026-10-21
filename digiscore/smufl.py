@@ -176,6 +176,7 @@ GREEK_SONATA_MAPPING: Dict[str, str] = {
     "\u0396": "accidentalNatural", "\u0397": "accidentalSharp", "\u03b1": "accidentalFlat",
     "\u03b2": "timeSigCommon", "\u03d6": "noteheadWhole", "\u2212": "augmentationDot",
     "\u0399": "flag8thUp", "\u03b9": "flag8thDown",
+    "\u2200": "accidentalSharp", "\u03a4": "fermataAbove",
 }
 _greek_sonata: set = set()
 
