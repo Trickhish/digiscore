@@ -222,3 +222,30 @@ def test_choir_mode_leaves_piano_alone(tmp_path):
     out = str(tmp_path / "out.musicxml")
     convert_score("examples/musetrainer/Fur_Elise_Easy_Piano.pdf", out, engine="vector", use_ai=False, choir=True)
     assert len(music21.converter.parse(out).parts) == 2
+
+
+@pytest.mark.parametrize("stem,names", [
+    ("Nh_Mendelssohn_Abendlied_19_4", ["Soprano", "Alto", "Tenor", "Bass"]),
+    ("Bell_A_highland_lad", ["Soprano", "Alto", "Tenor", "Bass"]),
+    ("Nh_Andre_Abendlied", ["Soprano", "Alto", "Voice 2", "Voice 3"]),
+])
+def test_split_voices(stem, names, tmp_path):
+    import music21
+    out = str(tmp_path / "out.musicxml")
+    convert_score(f"examples/cpdl/{stem}.pdf", out, engine="vector", use_ai=False, choir=True, split_voices=True)
+    s = music21.converter.parse(out)
+    assert [p.partName for p in s.parts] == names
+    # The two parts of one staff keep the same bars
+    lens = [[m.duration.quarterLength for m in p.getElementsByClass("Measure")] for p in s.parts[:2]]
+    assert lens[0] == lens[1]
+    # The upper voice of a shared staff lies above the lower one
+    hi = [n.pitches[-1].midi for n in s.parts[0].flatten().notes]
+    lo = [n.pitches[0].midi for n in s.parts[1].flatten().notes]
+    assert sum(hi) / len(hi) > sum(lo) / len(lo)
+
+
+def test_split_voices_leaves_satb_alone(tmp_path):
+    import music21
+    out = str(tmp_path / "out.musicxml")
+    convert_score("examples/cpdl/Br-120.pdf", out, engine="vector", use_ai=False, split_voices=True)
+    assert len(music21.converter.parse(out).parts) == 4

@@ -73,7 +73,7 @@ def apply_choir_mode(score: dict) -> dict:
     keep = sung_parts(parts)
     if len(keep) == len(parts):
         return score
-    kept = [parts[k] for k in keep]
+    kept = [dict(parts[k]) for k in keep]
     for i, p in enumerate(kept):
         p["part_id"] = f"P{i + 1}"
     out = dict(score)

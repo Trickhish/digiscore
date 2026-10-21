@@ -56,6 +56,11 @@ def main():
         help="Choir mode: keep the sung parts (SATB, SA/TB...) and drop the accompaniment.",
     )
     parser.add_argument(
+        "--split-voices",
+        action="store_true",
+        help="One part per voice: staves shared by two voices (SA, TB) become two parts.",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -84,6 +89,7 @@ def main():
             use_ai=not args.no_ai,
             sheets=args.sheets,
             choir=args.choir,
+            split_voices=args.split_voices,
         )
         print(f"[+] Successfully generated: {out_file}")
     except Exception as e:

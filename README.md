@@ -51,13 +51,26 @@ Keeps the sung parts only (SATB on four staves, SA/TB on two, or any other
 voicing) and leaves out organ, piano, strings, continuo and other instruments.
 A part is taken as sung when its staff label names a voice, or, unlabelled,
 when it carries lyrics. Scores without any sung part (piano pieces) are left
-whole. Two-voice staves stay as one part with two voices.
+whole. Two-voice staves stay as one part with two voices, unless split:
+
+```bash
+digiscore score.pdf -o output.musicxml --choir --split-voices
+```
+`--split-voices` writes one part per voice: a staff shared by two voices
+(labelled "S A", "T/B"..., or unlabelled with two voices in most bars) becomes
+two parts, named from the label (Soprano/Alto, Tenor/Bass). Stem-up notes go to
+the upper part and stem-down notes to the lower one; a chord gives its top and
+bottom notes, a single note is a unison for both, and words printed once for the
+staff are copied to both parts. Staves named for one voice keep their divisi.
+On the ten SA/TB CPDL scores, the worst voice of each matches the reference
+voice to 94% on average. Vector PDFs only.
 
 ### Engine Selection & Options
 - `--engine {auto,vector,notelite}`: Choose specific engine or let digiScore auto-detect (default: `auto`).
 - `--no-ai`: Disable AI metadata extraction and lyrics verification.
 - `--sheets SHEETS`: Specify sheet numbers/ranges for OMR (e.g. `1` or `1-3`).
 - `--choir`: Choir mode, sung parts only (see above).
+- `--split-voices`: One part per voice for staves shared by two voices (vector PDFs).
 - `-v, --verbose`: Display verbose progress output.
 
 ## Python API
@@ -76,6 +89,7 @@ output_path = convert_score(
     engine="auto",
     use_ai=True,
     choir=False,  # True: sung parts only
+    split_voices=False,  # True: SA / TB staves become one part per voice
 )
 ```
 

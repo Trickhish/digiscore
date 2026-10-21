@@ -115,6 +115,7 @@ def convert_score(
     use_ai: bool = True,
     sheets: Optional[str] = None,
     choir: bool = False,
+    split_voices: bool = False,
 ) -> str:
     """
     Converts a singing score PDF to MusicXML 4.0.
@@ -126,6 +127,8 @@ def convert_score(
         use_ai: Whether to enrich metadata and lyrics using AI (ai.dury.dev).
         sheets: Sheet selection for NoteLite OMR (e.g. "1" or "1-3").
         choir: Choir mode: keep the sung parts only, dropping the accompaniment.
+        split_voices: One part per voice: a staff shared by two voices (SA, TB)
+            becomes two parts (vector PDFs).
 
     Returns:
         The path of the created MusicXML file.
@@ -157,6 +160,9 @@ def convert_score(
         if choir:
             from digiscore.vector.choir import apply_choir_mode
             score_data = apply_choir_mode(score_data)
+        if split_voices:
+            from digiscore.vector.split import split_voices as _split
+            score_data = _split(score_data)
         xml_content = build_musicxml(score_data)
     elif selected_engine in ("notelite", "omr"):
         if not is_notelite_available():
