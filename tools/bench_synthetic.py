@@ -8,6 +8,7 @@ scanned-score path on the same material.
 """
 
 import argparse
+import re
 import difflib
 import glob
 import io
@@ -39,6 +40,25 @@ def tokens(part):
         lyr = tuple(l.text for l in n.lyrics) if not n.isRest else ()
         out.append((p, float(n.quarterLength), lyr))
     return out
+
+
+def onset_ratio(pred_part, gt_part, shift=0) -> float:
+    """
+    Notes per onset, the same however they are split into chords and voices:
+    each part becomes a sequence of (pitch, duration) ordered by bar, onset in
+    the bar and pitch, and the sequences are matched like the main score.
+    """
+    def seq(part, sh):
+        out = []
+        for m in part.getElementsByClass("Measure"):
+            here = []
+            for n in m.recurse().notes:
+                on = round(float(n.getOffsetInHierarchy(m)), 3)
+                for pp in n.pitches:
+                    here.append((on, pp.midi + sh, round(float(n.quarterLength), 3)))
+            out.extend((q[1], q[2]) for q in sorted(here))
+        return out
+    return ratio(seq(pred_part, 0), seq(gt_part, shift))
 
 
 def _transpose(name: str, semitones: int) -> str:
@@ -112,10 +132,11 @@ def compare(pred_path, gt_path, choir=False):
     if choir:
         gt = _sung_only(gt, len(pred.parts))
     res = {"parts": f"{len(pred.parts)}/{len(gt.parts)}"}
-    notes, lyrics, per_part, octave_parts = [], [], [], []
+    notes, lyrics, per_part, octave_parts, onsets = [], [], [], [], []
     for i, gp in enumerate(gt.parts):
         if i >= len(pred.parts):
             notes.append(0.0)
+            onsets.append(0.0)
             continue
         pt, gtk = tokens(pred.parts[i]), tokens(gp)
         r = ratio([t[:2] for t in pt], [t[:2] for t in gtk])
@@ -128,13 +149,19 @@ def compare(pred_path, gt_path, choir=False):
                 r = r2
                 octave_parts.append(gp.partName or f"P{i + 1}")
         notes.append(r)
-        # Entries without letters ("-" typed as a lyric) are not lyrics
-        lg = [x for t in gtk for x in t[2] if x and any(c.isalpha() for c in x)]
-        lp = [x for t in pt for x in t[2] if x and any(c.isalpha() for c in x)]
+        onsets.append(max(onset_ratio(pred.parts[i], gp, sh) for sh in (0, 12, -12)))
+        # Entries without letters ("-" typed as a lyric) are not lyrics; verse
+        # numbers typed into the first syllable ("2. Swift") are not part of it
+        def _clean(x):
+            return re.sub(r"^\d+[.)]\s*", "", x.replace("\xa0", " ")).strip()
+        lg = [_clean(x) for t in gtk for x in t[2] if x and any(c.isalpha() for c in x)]
+        lp = [_clean(x) for t in pt for x in t[2] if x and any(c.isalpha() for c in x)]
         if lg:
             lyrics.append(ratio(lp, lg))
         per_part.append((gp.partName or f"P{i + 1}", round(notes[-1], 3), round(ratio(lp, lg), 3) if lg else None))
     res["notes"] = round(min(notes), 3)
+    # Same notes however split into chords and voices (worst part)
+    res["onsets"] = round(min(onsets), 3) if onsets else 0.0
     def ties(sc):
         # Matched by part, bar, beat in the bar and pitch: a bar's absolute time
         # shifts when an earlier bar is off, the tie itself is still right
@@ -207,6 +234,7 @@ def main():
     ok = [r for _, r in rows if "notes" in r]
     if ok:
         print(f"\n{len(ok)}/{len(rows)} converted | mean notes {sum(r['notes'] for r in ok)/len(ok):.3f}"
+              f" | mean onsets {sum(r.get('onsets', 0) for r in ok)/len(ok):.3f}"
               f" | perfect notes {sum(r['notes'] == 1 for r in ok)}"
               f" | time ok {sum(r['time'] == 'ok' for r in ok)}"
               f" | valid {sum(bool(r['valid']) for r in ok)}")

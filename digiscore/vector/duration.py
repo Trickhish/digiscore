@@ -43,6 +43,24 @@ def resolve_note_durations(
     Computes note duration (in quarter divisions), note type (quarter, eighth, etc.),
     dots, and beam states in-place.
     """
+    # A head drawn twice at one spot is a unison of two voices: the second copy
+    # takes the other stem when there is one
+    taken: dict = {}
+
+    def stem_for(n):
+        key = (n.get("glyph_name"), round(n["x"], 1), round(n["y"], 1))
+        used = taken.get(key)
+        if used is not None:
+            others = [s for s in stems if s is not used]
+            st = find_stem_for_note(n, others, line_spacing)
+            if st is not None and (st.y0 + st.y1 < 2 * n["y"]) != (used.y0 + used.y1 < 2 * n["y"]):
+                return st
+            return used
+        st = find_stem_for_note(n, stems, line_spacing)
+        if st is not None:
+            taken[key] = st
+        return st
+
     for n in notes:
         # Check if rest
         is_rest = n.get("is_rest", False)
@@ -81,14 +99,14 @@ def resolve_note_durations(
             elif "Half" in glyph_name:
                 n["type"] = "half"
                 n["duration_quarters"] = 2.0
-                stem = find_stem_for_note(n, stems, line_spacing)
+                stem = stem_for(n)
                 n["stem"] = stem
                 if stem is not None:
                     n["stem_dir"] = "up" if (stem.y0 + stem.y1) / 2 < n["y"] else "down"
             else:
                 # Black notehead: the number of beams or flags on its own stem gives the value
                 levels = 0
-                stem = find_stem_for_note(n, stems, line_spacing)
+                stem = stem_for(n)
                 n["stem"] = stem
                 if stem is not None:
                     n["stem_dir"] = "up" if (stem.y0 + stem.y1) / 2 < n["y"] else "down"
