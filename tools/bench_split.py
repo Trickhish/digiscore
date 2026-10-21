@@ -43,21 +43,26 @@ def merge_rests(s):
         else: out.append((p, q))
     return out
 
-tot = []
-for f in sorted(glob.glob('examples/cpdl/*.pdf')):
-    if len(sys.argv) > 1 and sys.argv[1] not in f: continue
-    try: base = apply_choir_mode(parse_vector_score(pymupdf.open(f)))
-    except Exception: continue
-    if 'parts' not in base: continue
-    sd = split_voices(base)
-    if len(sd['parts']) != 2 * len(base['parts']) or len(base['parts']) != 2: continue
-    open('/tmp/opencode/sp.musicxml', 'w').write(build_musicxml(sd))
-    S = music21.converter.parse('/tmp/opencode/sp.musicxml')
-    G = music21.converter.parse(f[:-4] + '.mxl')
-    rs = []
-    for i in range(4):
-        a = merge_rests(seq_pred(S.parts[i], i % 2)); b = merge_rests(ref_voice(G.parts[i // 2], i % 2))
-        rs.append(round(max(ratio(a, b), ratio([(p if p == 'R' else p + 12, q) for p, q in a], b), ratio([(p if p == 'R' else p - 12, q) for p, q in a], b)), 3))
-    tot.append(min(rs))
-    print(f.split('/')[-1][:30], [p.partName for p in S.parts], rs)
-print('mean worst', round(sum(tot) / len(tot), 3))
+def main():
+    tot = []
+    for f in sorted(glob.glob('examples/cpdl/*.pdf')):
+        if len(sys.argv) > 1 and sys.argv[1] not in f: continue
+        try: base = apply_choir_mode(parse_vector_score(pymupdf.open(f)))
+        except Exception: continue
+        if 'parts' not in base: continue
+        sd = split_voices(base)
+        if len(sd['parts']) != 2 * len(base['parts']) or len(base['parts']) != 2: continue
+        open('/tmp/opencode/sp.musicxml', 'w').write(build_musicxml(sd))
+        S = music21.converter.parse('/tmp/opencode/sp.musicxml')
+        G = music21.converter.parse(f[:-4] + '.mxl')
+        rs = []
+        for i in range(4):
+            a = merge_rests(seq_pred(S.parts[i], i % 2)); b = merge_rests(ref_voice(G.parts[i // 2], i % 2))
+            rs.append(round(max(ratio(a, b), ratio([(p if p == 'R' else p + 12, q) for p, q in a], b), ratio([(p if p == 'R' else p - 12, q) for p, q in a], b)), 3))
+        tot.append(min(rs))
+        print(f.split('/')[-1][:30], [p.partName for p in S.parts], rs)
+    print('mean worst', round(sum(tot) / len(tot), 3))
+
+
+if __name__ == "__main__":
+    main()

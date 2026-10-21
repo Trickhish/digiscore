@@ -249,3 +249,23 @@ def test_split_voices_leaves_satb_alone(tmp_path):
     out = str(tmp_path / "out.musicxml")
     convert_score("examples/cpdl/Br-120.pdf", out, engine="vector", use_ai=False, split_voices=True)
     assert len(music21.converter.parse(out).parts) == 4
+
+
+def test_split_voices_xml_matches_vector_split(tmp_path):
+    """The MusicXML-level split (used for scans) agrees with the vector one."""
+    import music21
+    from digiscore.omr.split import split_voices_xml
+    pdf = "examples/cpdl/Bell_A_highland_lad.pdf"
+    a, b = str(tmp_path / "a.musicxml"), str(tmp_path / "b.musicxml")
+    convert_score(pdf, a, engine="vector", use_ai=False, choir=True)
+    (tmp_path / "x.musicxml").write_text(split_voices_xml(open(a).read()))
+    convert_score(pdf, b, engine="vector", use_ai=False, choir=True, split_voices=True)
+    x, y = music21.converter.parse(str(tmp_path / "x.musicxml")), music21.converter.parse(b)
+    assert [p.partName for p in x.parts] == ["Soprano", "Alto", "Tenor", "Bass"]
+
+    def heads(p):
+        return [(float(n.offset), n.pitches[-1].midi) for n in p.flatten().notes]
+    for px, py in zip(x.parts, y.parts):
+        hx, hy = set(heads(px)), set(heads(py))
+        assert len(hx & hy) >= 0.95 * len(hy)
+        assert sum(1 for n in px.recurse().notes if n.lyrics) >= 0.9 * sum(1 for n in py.recurse().notes if n.lyrics)

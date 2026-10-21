@@ -63,14 +63,17 @@ the upper part and stem-down notes to the lower one; a chord gives its top and
 bottom notes, a single note is a unison for both, and words printed once for the
 staff are copied to the lower part where it has none of its own. Staves named for one voice keep their divisi.
 On the ten SA/TB CPDL scores, the worst voice of each matches the reference
-voice to 94% on average. Vector PDFs only.
+voice to 94% on average (`python tools/bench_split.py`). Scanned scores are
+split the same way on the OMR's MusicXML, keeping its ties, beams and
+barlines; there the result follows the recognition (about 0.9 per voice on
+clean 130 DPI scans of these scores, less where the OMR itself struggles).
 
 ### Engine Selection & Options
 - `--engine {auto,vector,notelite}`: Choose specific engine or let digiScore auto-detect (default: `auto`).
 - `--no-ai`: Disable AI metadata extraction and lyrics verification.
 - `--sheets SHEETS`: Specify sheet numbers/ranges for OMR (e.g. `1` or `1-3`).
 - `--choir`: Choir mode, sung parts only (see above).
-- `--split-voices`: One part per voice for staves shared by two voices (vector PDFs).
+- `--split-voices`: One part per voice for staves shared by two voices.
 - `-v, --verbose`: Display verbose progress output.
 
 ## Python API

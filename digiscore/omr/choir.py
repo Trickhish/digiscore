@@ -7,7 +7,7 @@ an instrument, or, in a score whose other parts carry words, when it has none.
 
 from lxml import etree
 
-from digiscore.vector.choir import _INSTRUMENT, _VOICE
+from digiscore.vector.choir import _INSTRUMENT, _VOICE, _VOICE_PAIR
 
 
 def drop_accompaniment(xml: str) -> str:
@@ -23,7 +23,12 @@ def drop_accompaniment(xml: str) -> str:
     info = []
     for sp in score_parts:
         pid = sp.get("id")
-        name = " ".join(t.strip() for t in sp.xpath("part-name/text()|part-abbreviation/text()"))
+        texts = [t.strip() for t in sp.xpath("part-name/text()|part-abbreviation/text()") if t.strip()]
+        name = texts[0] if texts else ""
+        if any(_VOICE_PAIR.match(t) for t in texts):
+            name = next(t for t in texts if _VOICE_PAIR.match(t))
+        elif len(texts) > 1 and not _VOICE.search(name):
+            name = " ".join(texts)
         notes = parts[pid].findall(".//note") if pid in parts else []
         pitched = [n for n in notes if n.find("rest") is None]
         words = sum(1 for n in pitched if n.find("lyric/text") is not None)
@@ -32,12 +37,17 @@ def drop_accompaniment(xml: str) -> str:
 
     any_words = max(s for _, _, s in info) >= 0.2
     drop = set()
+    def voiced(name):
+        return bool(name) and (_VOICE.search(name) or _VOICE_PAIR.match(name))
+
     for pid, name, share in info:
-        if name and _INSTRUMENT.search(name) and not _VOICE.search(name):
+        if voiced(name):
+            continue
+        if name and _INSTRUMENT.search(name):
             drop.add(pid)
         # OCR of the page text picks up stray words: a part with far fewer
         # words than the sung ones is accompaniment
-        elif any_words and share < 0.06 and not (name and _VOICE.search(name)):
+        elif any_words and share < 0.06:
             drop.add(pid)
     if not drop or len(drop) == len(info):
         return xml

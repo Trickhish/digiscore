@@ -128,7 +128,7 @@ def convert_score(
         sheets: Sheet selection for NoteLite OMR (e.g. "1" or "1-3").
         choir: Choir mode: keep the sung parts only, dropping the accompaniment.
         split_voices: One part per voice: a staff shared by two voices (SA, TB)
-            becomes two parts (vector PDFs).
+            becomes two parts.
 
     Returns:
         The path of the created MusicXML file.
@@ -298,6 +298,9 @@ def convert_score(
             if choir:
                 from digiscore.omr.choir import drop_accompaniment
                 xml_content = drop_accompaniment(xml_content)
+            if split_voices:
+                from digiscore.omr.split import split_voices_xml
+                xml_content = split_voices_xml(xml_content)
     else:
         raise ValueError(f"Unknown engine: {engine}. Choose 'auto', 'vector', or 'notelite'.")
 

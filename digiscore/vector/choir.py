@@ -17,6 +17,9 @@ _VOICE = re.compile(
     r"chœur|choeur|coro|men|women|solo|soli|tutti|ténor|ténors|sopranos|basse|baryton)\b\.?",
     re.I,
 )
+# A voice pair as OCR may read it: "S/A", "T B", "TIB", "S.A.", "T1B"
+_VOICE_PAIR = re.compile(r"^\s*[SATB]\s*[./|Il1&+\-]?\s*[SATB]\.?\s*$")
+
 _INSTRUMENT = re.compile(
     r"(organ|orgel|organo|orgue|piano|pno|klavier|clavier|harpsichord|cembalo|keyboard|"
     r"accomp|harp|harfe|guitar|gitarre|violin|violino|vln|vls|vl\.|viola|vla|cello|violoncell|vc\.|"
@@ -34,7 +37,7 @@ def part_kind(part: dict) -> str:
         return "unknown"
     if _INSTRUMENT.search(labels):
         return "instrument"
-    if _VOICE.search(labels):
+    if _VOICE.search(labels) or any(_VOICE_PAIR.match(x) for x in part.get("labels", [])):
         return "voice"
     return "unknown"
 
