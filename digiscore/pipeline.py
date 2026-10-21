@@ -114,6 +114,7 @@ def convert_score(
     engine: str = "auto",  # 'auto', 'vector', or 'notelite'
     use_ai: bool = True,
     sheets: Optional[str] = None,
+    choir: bool = False,
 ) -> str:
     """
     Converts a singing score PDF to MusicXML 4.0.
@@ -124,6 +125,7 @@ def convert_score(
         engine: 'auto', 'vector', or 'notelite'.
         use_ai: Whether to enrich metadata and lyrics using AI (ai.dury.dev).
         sheets: Sheet selection for NoteLite OMR (e.g. "1" or "1-3").
+        choir: Choir mode: keep the sung parts only, dropping the accompaniment.
 
     Returns:
         The path of the created MusicXML file.
@@ -152,6 +154,9 @@ def convert_score(
         doc = pymupdf.open(abs_input)
         score_data = parse_vector_score(doc)
         doc.close()
+        if choir:
+            from digiscore.vector.choir import apply_choir_mode
+            score_data = apply_choir_mode(score_data)
         xml_content = build_musicxml(score_data)
     elif selected_engine in ("notelite", "omr"):
         if not is_notelite_available():
@@ -284,6 +289,9 @@ def convert_score(
             xml_content = merge_split_parts(xml_content)
             from digiscore.omr.postprocess import fix_measure_rests
             xml_content = fix_measure_rests(xml_content)
+            if choir:
+                from digiscore.omr.choir import drop_accompaniment
+                xml_content = drop_accompaniment(xml_content)
     else:
         raise ValueError(f"Unknown engine: {engine}. Choose 'auto', 'vector', or 'notelite'.")
 

@@ -43,10 +43,21 @@ digiscore path/to/score.pdf -o output.mxl
 digiscore path/to/scanned_score.pdf -o output.musicxml --sheets 1
 ```
 
+### Choir Mode (drop the accompaniment)
+```bash
+digiscore path/to/score.pdf -o output.musicxml --choir
+```
+Keeps the sung parts only (SATB on four staves, SA/TB on two, or any other
+voicing) and leaves out organ, piano, strings, continuo and other instruments.
+A part is taken as sung when its staff label names a voice, or, unlabelled,
+when it carries lyrics. Scores without any sung part (piano pieces) are left
+whole. Two-voice staves stay as one part with two voices.
+
 ### Engine Selection & Options
 - `--engine {auto,vector,notelite}`: Choose specific engine or let digiScore auto-detect (default: `auto`).
 - `--no-ai`: Disable AI metadata extraction and lyrics verification.
 - `--sheets SHEETS`: Specify sheet numbers/ranges for OMR (e.g. `1` or `1-3`).
+- `--choir`: Choir mode, sung parts only (see above).
 - `-v, --verbose`: Display verbose progress output.
 
 ## Python API
@@ -63,7 +74,8 @@ output_path = convert_score(
     input_path="score.pdf",
     output_path="score.musicxml",
     engine="auto",
-    use_ai=True
+    use_ai=True,
+    choir=False,  # True: sung parts only
 )
 ```
 
@@ -84,6 +96,7 @@ python tools/make_synthetic.py --count 20          # needs MuseScore 4 (MSCORE=p
 python tools/bench_synthetic.py                    # vector path
 python tools/bench_synthetic.py --scan 130 --engine notelite   # same scores as 130 DPI fake scans
 python tools/bench_synthetic.py --dir examples/cpdl          # real choral scores from CPDL
+python tools/bench_synthetic.py --dir examples/cpdl --choir  # the same in choir mode
 python tools/bench_synthetic.py --dir examples/musetrainer   # piano scores
 ```
 
@@ -94,7 +107,9 @@ Current results (mean share of notes right per score, worst part):
 | `examples/synthetic` (vector) | 20 | 1.000 (20 perfect) | 1.000 |
 | `examples/source_and_pdf` | 3 | 1.000 | 1.000 |
 | `examples/cpdl` | 41 (40 readable) | 0.904 | 0.877 |
+| `examples/cpdl --choir` | 41 (40 readable) | 0.913 (9 perfect) | 0.877 |
 | `examples/musetrainer` | 12 | 0.954 (7 perfect) | – |
+| `examples/synthetic --scan 130` (NoteLite) | 20 | 0.954 | – |
 
 Vector PDFs from MuseScore 2–4, Sibelius, Finale, LilyPond, capella, Mozart
 and several printer drivers (renamed or Type3 music fonts) are read.

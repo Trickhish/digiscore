@@ -183,3 +183,40 @@ def test_musetrainer_vector_notes(stem, tmp_path):
     r = compare(out, pdf[:-4] + ".mxl")
     assert r["notes"] >= MUSETRAINER_GOOD[stem], r
     assert r["valid"] in (None, True), r
+
+
+# Choir mode: accompanied scores keep exactly their sung parts
+CHOIR_ACCOMPANIED = {
+    "Ave_VerumSATB": 4, "Farrant_High_Evening": 4, "Morera.ALaPromisionSagrada.440hz": 4,
+    "Nh_Aiblinger_VP_01_Dixit": 4,
+}
+
+
+@pytest.mark.parametrize("stem", sorted(CHOIR_ACCOMPANIED))
+def test_choir_mode_drops_accompaniment(stem, tmp_path):
+    import sys
+    sys.path.insert(0, "tools")
+    from bench_synthetic import compare
+    pdf = f"examples/cpdl/{stem}.pdf"
+    out = str(tmp_path / "out.musicxml")
+    convert_score(pdf, out, engine="vector", use_ai=False, choir=True)
+    r = compare(out, pdf[:-4] + ".mxl", choir=True)
+    assert r["parts"] == f"{CHOIR_ACCOMPANIED[stem]}/{CHOIR_ACCOMPANIED[stem]}", r
+    assert r["notes"] >= 0.75 and r["valid"] in (None, True), r
+
+
+@pytest.mark.parametrize("stem", ["Hane-ach", "Nh_Mendelssohn_Abendlied_19_4", "Treue_Liebe"])
+def test_choir_mode_keeps_unaccompanied(stem, tmp_path):
+    import music21
+    pdf = f"examples/cpdl/{stem}.pdf"
+    a, b = str(tmp_path / "a.musicxml"), str(tmp_path / "b.musicxml")
+    convert_score(pdf, a, engine="vector", use_ai=False)
+    convert_score(pdf, b, engine="vector", use_ai=False, choir=True)
+    assert len(music21.converter.parse(a).parts) == len(music21.converter.parse(b).parts)
+
+
+def test_choir_mode_leaves_piano_alone(tmp_path):
+    import music21
+    out = str(tmp_path / "out.musicxml")
+    convert_score("examples/musetrainer/Fur_Elise_Easy_Piano.pdf", out, engine="vector", use_ai=False, choir=True)
+    assert len(music21.converter.parse(out).parts) == 2

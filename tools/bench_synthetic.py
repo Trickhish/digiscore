@@ -86,8 +86,31 @@ def fake_scan(pdf, out, dpi, seed=1):
     return out
 
 
-def compare(pred_path, gt_path):
+def _sung_only(score, n_pred):
+    """
+    The reference cut to its sung parts (choir mode), when the prediction has
+    fewer parts: the parts without any words go, starting from the last.
+    """
+    if len(score.parts) <= n_pred:
+        return score
+    wordless = []
+    for p in score.parts:
+        notes = list(p.recurse().notes)
+        if not any(any(l.text and any(c.isalpha() for c in l.text) for l in n.lyrics) for n in notes):
+            wordless.append(p)
+    drop = wordless[-(len(score.parts) - n_pred):] if len(wordless) >= len(score.parts) - n_pred else wordless
+    keep = [p for p in score.parts if p not in drop]
+    if keep and len(keep) < len(score.parts):
+        for p in list(score.parts):
+            if p not in keep:
+                score.remove(p)
+    return score
+
+
+def compare(pred_path, gt_path, choir=False):
     pred, gt = music21.converter.parse(pred_path), music21.converter.parse(gt_path)
+    if choir:
+        gt = _sung_only(gt, len(pred.parts))
     res = {"parts": f"{len(pred.parts)}/{len(gt.parts)}"}
     notes, lyrics, per_part, octave_parts = [], [], [], []
     for i, gp in enumerate(gt.parts):
@@ -160,6 +183,7 @@ def main():
     ap.add_argument("--only")
     ap.add_argument("--ai", action="store_true")
     ap.add_argument("--keep", help="directory to keep the converted files in")
+    ap.add_argument("--choir", action="store_true", help="choir mode (references cut to their sung parts)")
     a = ap.parse_args()
     rows = []
     with tempfile.TemporaryDirectory(prefix="bench_") as tmp:
@@ -174,8 +198,8 @@ def main():
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, f"{stem}.musicxml")
             try:
-                convert_score(pdf, out, engine=a.engine, use_ai=a.ai)
-                r = compare(out, gt)
+                convert_score(pdf, out, engine=a.engine, use_ai=a.ai, choir=a.choir)
+                r = compare(out, gt, choir=a.choir)
             except Exception as e:
                 r = {"error": str(e)[:120]}
             rows.append((stem, r))

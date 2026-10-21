@@ -473,6 +473,34 @@ def _merge_split_systems(page_data: List[dict]) -> None:
         pd["systems"] = out
 
 
+def _staff_label(staff: Staff, words: List[tuple], staves: List[Staff]) -> str:
+    """Text left of the staff at its height (an instrument or voice name)."""
+    sp = staff.line_spacing
+    out = []
+    for w in words:
+        x0, y0, x1, y1, t = w[0], w[1], w[2], w[3], w[4]
+        if x1 > staff.x_min - 0.5 * sp or x1 < staff.x_min - 25 * sp:
+            continue
+        cy = (y0 + y1) / 2
+        if staff.top_y - 2 * sp <= cy <= staff.bottom_y + 2 * sp:
+            out.append((x0, t))
+    return " ".join(t for _, t in sorted(out))
+
+
+def _in_brace(staff: Staff, glyphs: List[dict]) -> bool:
+    """The staff lies inside a brace drawn at the left of its system."""
+    sp = staff.line_spacing
+    for g in glyphs:
+        if g["name"] != "brace":
+            continue
+        x0, y0, x1, y1 = g["bbox"]
+        if x1 > staff.x_min + sp or x1 < staff.x_min - 6 * sp:
+            continue
+        if y0 - sp <= staff.top_y and staff.bottom_y <= y1 + sp:
+            return True
+    return False
+
+
 def _courtesy_clef(staff: Staff, glyphs: List[dict]) -> bool:
     """A clef drawn at the very end of the staff (announcing a change)."""
     sp = staff.line_spacing
@@ -683,6 +711,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     # Track measure numbers across systems for each part
     part_measure_counters = [1] * part_count
     fill_state: dict = {}
+    part_info: Dict[int, dict] = {}
 
     for p_info in page_data:
         p_idx = p_info["page_idx"]
@@ -714,6 +743,11 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
             upper_lyrics = []
             for s_idx, staff in enumerate(sys.staves):
                 p_idx_for_staff = staff.part_idx
+                info = part_info.setdefault(p_idx_for_staff, {"labels": [], "braced": 0, "staves": 0})
+                info["staves"] += 1
+                info["labels"].append(_staff_label(staff, words, page_staves))
+                if _in_brace(staff, glyphs):
+                    info["braced"] += 1
 
                 # Find clef for this staff (near staff start x, vertically within staff bounds +- 10 pt)
                 staff_clefs = [
@@ -1006,6 +1040,10 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 title = txt
 
     _pair_ties(parts)
+    for k, part in enumerate(parts):
+        info = part_info.get(k, {})
+        part["labels"] = [x for x in info.get("labels", []) if x]
+        part["braced"] = info.get("braced", 0) / max(1, info.get("staves", 1))
 
     return {
         "title": title,

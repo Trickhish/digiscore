@@ -51,6 +51,11 @@ def main():
         help="Sheet range for scanned OMR processing (e.g. '1' or '1-3').",
     )
     parser.add_argument(
+        "--choir",
+        action="store_true",
+        help="Choir mode: keep the sung parts (SATB, SA/TB...) and drop the accompaniment.",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -78,6 +83,7 @@ def main():
             engine=args.engine,
             use_ai=not args.no_ai,
             sheets=args.sheets,
+            choir=args.choir,
         )
         print(f"[+] Successfully generated: {out_file}")
     except Exception as e:
