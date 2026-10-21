@@ -296,6 +296,9 @@ def verify_book_time_pairs(omr_path: str, *pdf_paths: str, min_gain: float = 0.0
                 for e in c:
                     if e.tag != "time-pair" or e.get("staff") not in staff_top:
                         continue
+                    # Pairs we injected ourselves (grade 0.9, frozen) are not engine readings
+                    if e.get("grade") == "0.9" and e.get("frozen") == "true":
+                        continue
                     sys_pairs += 1
                     b = e.find("bounds")
                     x = float(b.get("x"))
@@ -311,7 +314,8 @@ def verify_book_time_pairs(omr_path: str, *pdf_paths: str, min_gain: float = 0.0
                     label = max(best, key=best.get)
                     rational, _ = to_rational(label)
                     have = e.get("time-rational")
-                    if rational and rational != have and best[label] >= MIN_SCORE:
+                    # A real signature in the image matches very closely
+                    if rational and rational != have and best[label] >= 0.8:
                         # The engine's own reading must score clearly lower
                         own = max(best.get(have, -1.0),
                                   best.get("C", -1.0) if have == "4/4" else -1.0,
