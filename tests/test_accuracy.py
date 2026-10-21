@@ -159,3 +159,27 @@ def test_cpdl_vector_notes(stem, tmp_path):
     r = compare(out, pdf[:-4] + ".mxl")
     assert r["notes"] >= CPDL_GOOD[stem], r
     assert r["valid"] in (None, True), r
+
+
+# MuseTrainer piano pieces (vector engine): minimum note score
+MUSETRAINER_GOOD = {
+    "Bach_Minuet_in_G_Major_BWV_Anh._114": 1.0, "Fur_Elise_Easy_Piano": 1.0,
+    "Happy_Birthday_To_You_Piano": 1.0, "Ode_to_Joy_Easy_variation": 1.0,
+    "Greensleeves_for_Piano_easy_and_beautiful": 1.0, "Waltz_in_A_MinorChopin": 1.0,
+    "Swan_Lake": 1.0, "Canon_in_D_easy": 0.96, "Carol_of_the_Bells_easy_piano": 0.97,
+    "Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book": 0.97,
+    "J._S._Bach_-_Air_on_the_G_String_Piano_arrangement": 0.93,
+}
+
+
+@pytest.mark.parametrize("stem", sorted(MUSETRAINER_GOOD))
+def test_musetrainer_vector_notes(stem, tmp_path):
+    import sys
+    sys.path.insert(0, "tools")
+    from bench_synthetic import compare
+    pdf = f"examples/musetrainer/{stem}.pdf"
+    out = str(tmp_path / "out.musicxml")
+    convert_score(pdf, out, engine="vector", use_ai=False)
+    r = compare(out, pdf[:-4] + ".mxl")
+    assert r["notes"] >= MUSETRAINER_GOOD[stem], r
+    assert r["valid"] in (None, True), r

@@ -44,6 +44,13 @@ def _head_staff(head: dict, staves: List[Staff], heads: List[dict], stems) -> Op
         for st in staves:
             if id(st) == best:
                 return st
+    # No head of the chord inside a staff: the staff its stem runs into
+    for st in staves:
+        if st is near or not (st.x_min - 5 <= head["x"] <= st.x_max + 5):
+            continue
+        overlap = min(stem.y1, st.bottom_y) - max(stem.y0, st.top_y)
+        if overlap >= 1.5 * sp and abs(head["y"] - (st.top_y + st.bottom_y) / 2) < 8 * sp:
+            return st
     return near
 
 
@@ -212,6 +219,108 @@ def _resolve_grace(notes: List[dict], sp: float) -> None:
         grace_x[x] = ok
         for n in group:
             n["grace"] = ok
+
+
+_TUPLET_NORMAL = {3: 2, 5: 4, 6: 4, 7: 4}
+
+
+def _tuplet_marks(raw: Optional[dict], styled) -> List[tuple]:
+    """Upright single digits 3, 5, 6, 7 in a text font: (x_centre, y_centre, n)."""
+    out = []
+    if not raw:
+        return out
+    for block in raw.get("blocks", []):
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                t = "".join(c["c"] for c in span.get("chars", [])).strip()
+                if t not in ("3", "5", "6", "7"):
+                    continue
+                x0, y0, x1, y1 = span["bbox"]
+                out.append(((x0 + x1) / 2, (y0 + y1) / 2, int(t)))
+    return out
+
+
+def _bracket_span(mx: float, my: float, drawings: List[dict], sp: float) -> Optional[Tuple[float, float]]:
+    """
+    x extent of a tuplet bracket around a number: a hook (short vertical then
+    horizontal) ending left of it and a mirrored one starting right of it, at
+    its height.
+    """
+    left, right = None, None
+    for d in drawings:
+        items = d.get("items", [])
+        if len(items) != 2 or any(it[0] != "l" for it in items):
+            continue
+        pts = [items[0][1], items[0][2], items[1][2]]
+        xs = [q.x for q in pts]
+        ys = [q.y for q in pts]
+        if max(ys) - min(ys) > 2 * sp or abs((min(ys) + max(ys)) / 2 - my) > 1.5 * sp:
+            continue
+        x0, x1 = min(xs), max(xs)
+        if 0 <= mx - x1 < 3 * sp:
+            left = x0 if left is None else min(left, x0)
+        elif 0 <= x0 - mx < 3 * sp:
+            right = x1 if right is None else max(right, x1)
+    if left is not None and right is not None:
+        return left, right
+    return None
+
+
+def _apply_tuplets(staff: Staff, notes: List[dict], marks: List[tuple], beams, drawings) -> None:
+    """
+    A tuplet number with a bracket: the notes under the bracket. Without one,
+    a number close to a beam: the notes on that beam. Their values are scaled.
+    """
+    sp = staff.line_spacing
+    heads = [n for n in notes if not n.get("is_rest") and n.get("stem") is not None and not n.get("grace")]
+    events = [n for n in notes if not n.get("grace")]
+    for mx, my, num in marks:
+        if not (staff.x_min <= mx <= staff.x_max):
+            continue
+        if not (staff.top_y - 9 * sp <= my <= staff.bottom_y + 9 * sp):
+            continue
+        br = _bracket_span(mx, my, drawings, sp)
+        if br is not None:
+            group = [n for n in events if br[0] - 1.5 * sp <= n["x"] <= br[1] + 0.5 * sp
+                     and nearest_staff(n, [staff]) is staff]
+            # Notes under the bracket on its side of the staff: all of one voice
+            n_on = len({round(n["x"], 1) for n in group})
+            if 2 <= n_on <= 2 * num:
+                normal = _TUPLET_NORMAL[num]
+                for n in group:
+                    if not n.get("tuplet"):
+                        n["tuplet"] = (num, normal)
+                        n["duration_quarters"] *= normal / num
+            continue
+        best = None
+        for b in beams:
+            if not (b.x0 - 0.5 * sp <= mx <= b.x1 + 0.5 * sp):
+                continue
+            yr = b.y_range_at(min(max(mx, b.x0), b.x1))
+            if yr is None:
+                continue
+            d = min(abs(my - yr[0]), abs(my - yr[1]))
+            if d < 3 * sp and (best is None or d < best[0]):
+                best = (d, b)
+        if best is None:
+            continue
+        b = best[1]
+        group = [n for n in heads if b.x0 - 1 <= n["stem"].x <= b.x1 + 1
+                 and b.y_range_at(n["stem"].x) is not None
+                 and b.y_range_at(n["stem"].x)[1] >= n["stem"].y0 - sp
+                 and b.y_range_at(n["stem"].x)[0] <= n["stem"].y1 + sp]
+        if not group:
+            continue
+        # Chords count once: the tuplet's notes are its distinct stems
+        n_stems = len({round(n["stem"].x, 1) for n in group})
+        if n_stems < 2 or n_stems > num:
+            continue
+        normal = _TUPLET_NORMAL[num]
+        for n in group:
+            if n.get("tuplet"):
+                continue
+            n["tuplet"] = (num, normal)
+            n["duration_quarters"] *= normal / num
 
 
 def _settle_grace(notes: List[dict], bar_len: float, sp: float, mid: float) -> None:
@@ -421,6 +530,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     """
     all_systems: List[System] = []
     page_data = []
+    page_data_raw: Dict[int, dict] = {}
     detect_mscore_flavour(doc)
     detect_capella_aliases(doc)
     detect_named_fonts(doc)
@@ -434,6 +544,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         all_systems.extend(systems)
 
         raw = page.get_text("rawdict")
+        page_data_raw[page_idx] = raw
         words = extract_text_tokens(page)
         styled_words = set(styled_tokens(page))
 
@@ -529,6 +640,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
 
         # Separate glyph types
         noteheads = [g for g in glyphs if is_notehead(g["name"])]
+        tuplet_marks = _tuplet_marks(page_data_raw.get(p_idx), styled_words)
         # Grace notes: heads clearly smaller than the page's usual head size
         head_sizes = sorted(g.get("size", 0.0) for g in noteheads)
         usual_head = head_sizes[len(head_sizes) // 2] if head_sizes else 0.0
@@ -685,6 +797,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 )
 
                 _resolve_grace(staff_notes_raw, staff.line_spacing)
+                _apply_tuplets(staff, staff_notes_raw, tuplet_marks, beams, drawings)
 
                 # Next staff top y for lyrics band
                 below = [s.top_y for s in page_staves if s.top_y > staff.bottom_y + 1]

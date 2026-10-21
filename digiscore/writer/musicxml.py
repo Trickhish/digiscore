@@ -15,6 +15,17 @@ def build_musicxml(
     """
     Constructs a valid MusicXML 4.0 string from the internal score representation.
     """
+    # Tuplets need divisions their durations divide into exactly
+    from fractions import Fraction
+    from math import lcm
+    for p in score_data.get("parts", []):
+        for m in p.get("measures", []):
+            for v in m.get("voices") or [[[n] for n in m.get("notes", [])]]:
+                for ev in v:
+                    for n in ev:
+                        if n.get("tuplet"):
+                            q = Fraction(n.get("duration_quarters", 1.0)).limit_denominator(64)
+                            divisions = lcm(divisions, q.denominator)
     root = etree.Element("score-partwise", version="4.0")
 
     # Work / Title
@@ -219,6 +230,12 @@ def _write_note(meas_elem, note: dict, divisions: int, voice: int, is_chord: boo
     if acc:
         acc_elem = etree.SubElement(note_elem, "accidental")
         acc_elem.text = acc
+
+    tup = note.get("tuplet")
+    if tup:
+        tm = etree.SubElement(note_elem, "time-modification")
+        etree.SubElement(tm, "actual-notes").text = str(tup[0])
+        etree.SubElement(tm, "normal-notes").text = str(tup[1])
 
     if tie_types:
         notations = etree.SubElement(note_elem, "notations")
