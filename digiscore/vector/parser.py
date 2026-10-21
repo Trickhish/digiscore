@@ -189,6 +189,73 @@ def _pair_ties(parts: List[dict]) -> None:
                             n.pop(flag)
 
 
+_ink_cache: Dict[Tuple[str, str], Optional[Tuple[float, float]]] = {}
+_doc_for_ink: List = []
+
+
+def _glyph_ink_x(font: str, char: str) -> Optional[Tuple[float, float]]:
+    """Horizontal ink extent of a glyph in em units, from the embedded font."""
+    key = (font, char)
+    if key in _ink_cache:
+        return _ink_cache[key]
+    _ink_cache[key] = None
+    if not _doc_for_ink:
+        return None
+    doc = _doc_for_ink[0]
+    try:
+        import io
+        for page in doc:
+            for f in page.get_fonts():
+                if f[3] != font and f[3].split("+", 1)[-1] != font.split("+", 1)[-1]:
+                    continue
+                _, ext, _, buf = doc.extract_font(f[0])
+                from fontTools.pens.boundsPen import BoundsPen
+                if ext == "cff":
+                    from fontTools.cffLib import CFFFontSet
+                    cs = CFFFontSet()
+                    cs.decompile(io.BytesIO(buf), None)
+                    fnt = cs[cs.fontNames[0]]
+                    # Subsets renumber their codes; the glyph names stay
+                    from fontTools.agl import UV2AGL
+                    name = UV2AGL.get(ord(char))
+                    if not name or name not in fnt.CharStrings:
+                        return None
+                    bp = BoundsPen(None)
+                    fnt.CharStrings[name].draw(bp)
+                    if bp.bounds:
+                        _ink_cache[key] = (bp.bounds[0] / 1000.0, bp.bounds[2] / 1000.0)
+                elif ext in ("ttf", "otf"):
+                    from fontTools.ttLib import TTFont
+                    t = TTFont(io.BytesIO(buf))
+                    cmap = t.getBestCmap() or {}
+                    name = cmap.get(ord(char))
+                    if name:
+                        gs = t.getGlyphSet()
+                        bp = BoundsPen(gs)
+                        gs[name].draw(bp)
+                        upm = t["head"].unitsPerEm
+                        if bp.bounds:
+                            _ink_cache[key] = (bp.bounds[0] / upm, bp.bounds[2] / upm)
+                return _ink_cache[key]
+    except Exception:
+        return None
+    return None
+
+
+def _dot_ink(g: dict) -> dict:
+    """
+    A dot placed by its ink: some fonts (capella) draw the dot well right of
+    the glyph origin, which then sits inside the notehead.
+    """
+    size = g.get("size") or 0.0
+    ink = _glyph_ink_x(g.get("font", ""), g.get("char", "")) if size else None
+    if not ink or ink[0] < 0.15:
+        return g
+    out = dict(g)
+    out["x"] = g["x"] + ink[0] * size
+    return out
+
+
 def _resolve_grace(notes: List[dict], sp: float) -> None:
     """
     Small heads are grace notes only when packed tightly in front of a
@@ -618,6 +685,8 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
     detect_mscore_flavour(doc)
     detect_capella_aliases(doc)
     detect_named_fonts(doc)
+    _doc_for_ink[:] = [doc]
+    _ink_cache.clear()
 
     # 1. Extract staves and page elements per page
     for page_idx in range(len(doc)):
@@ -734,6 +803,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         accidentals = [g for g in glyphs if "accidental" in g["name"].lower()]
         flags = [g for g in glyphs if "flag" in g["name"].lower()]
         dots = [g for g in glyphs if "dot" in g["name"].lower() and "repeat" not in g["name"].lower()]
+        dots = [_dot_ink(g) for g in dots]
         repeat_dots = [g for g in glyphs if "repeatdot" in g["name"].lower()]
 
         page_staves = p_info["staves"]

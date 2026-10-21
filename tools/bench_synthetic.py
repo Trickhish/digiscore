@@ -149,7 +149,8 @@ def compare(pred_path, gt_path, choir=False):
                 r = r2
                 octave_parts.append(gp.partName or f"P{i + 1}")
         notes.append(r)
-        onsets.append(max(onset_ratio(pred.parts[i], gp, sh) for sh in (0, 12, -12)))
+        if any(True for _ in gp.recurse().notes):
+            onsets.append(max(onset_ratio(pred.parts[i], gp, sh) for sh in (0, 12, -12)))
         # Entries without letters ("-" typed as a lyric) are not lyrics; verse
         # numbers typed into the first syllable ("2. Swift") are not part of it
         def _clean(x):

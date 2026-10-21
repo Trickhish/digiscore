@@ -134,6 +134,7 @@ CAPELLA_MAPPING: Dict[int, str] = {
     0x43: "cClef",
     0x45: "fClef",
     0x49: "restWhole",
+    0xB0: "restWhole",  # whole-bar rest
     0x4A: "restHalf",
     0x4B: "restQuarter",
     0x4C: "rest8th",

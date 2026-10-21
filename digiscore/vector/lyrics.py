@@ -342,10 +342,17 @@ def match_syllables_to_notes(
     for note in notes:
         note.setdefault("lyrics", [])
 
-    # Chords share one lyric: only the first head at a given x can take it
+    # Chords and the voices of a shared staff take one lyric at a given x: the
+    # upper voice's head (stem up, else the highest) carries it
+    def _rank(n):
+        return (0 if n.get("stem_dir") == "up" else 1, n.get("y", 0.0))
+
     sung = []
-    for note in sorted((n for n in notes if not n.get("is_rest")), key=lambda n: n.get("x", 0.0)):
+    for note in sorted((n for n in notes if not n.get("is_rest") and not n.get("grace")),
+                       key=lambda n: n.get("x", 0.0)):
         if sung and abs(note.get("x", 0.0) - sung[-1].get("x", 0.0)) < 1.0:
+            if _rank(note) < _rank(sung[-1]):
+                sung[-1] = note
             continue
         sung.append(note)
 
