@@ -39,6 +39,17 @@ def tokens(part):
     return out
 
 
+def _transpose(name: str, semitones: int) -> str:
+    if name == "R":
+        return name
+    out = []
+    for n in name.split("."):
+        p = music21.pitch.Pitch(n)
+        p.octave += semitones // 12
+        out.append(p.nameWithOctave)
+    return ".".join(out)
+
+
 def ratio(a, b):
     sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
     return sum(bl.size for bl in sm.get_matching_blocks()) / max(1, len(b))
@@ -76,17 +87,28 @@ def fake_scan(pdf, out, dpi, seed=1):
 def compare(pred_path, gt_path):
     pred, gt = music21.converter.parse(pred_path), music21.converter.parse(gt_path)
     res = {"parts": f"{len(pred.parts)}/{len(gt.parts)}"}
-    notes, lyrics = [], []
+    notes, lyrics, per_part, octave_parts = [], [], [], []
     for i, gp in enumerate(gt.parts):
         if i >= len(pred.parts):
             notes.append(0.0)
             continue
         pt, gtk = tokens(pred.parts[i]), tokens(gp)
-        notes.append(ratio([t[:2] for t in pt], [t[:2] for t in gtk]))
-        lg = [x for t in gtk for x in t[2]]
-        lp = [x for t in pt for x in t[2]]
+        r = ratio([t[:2] for t in pt], [t[:2] for t in gtk])
+        # Reference files sometimes write a tenor's octave-treble clef as a plain
+        # treble clef: a whole part one octave off is that, not a reading error
+        for shift in (12, -12):
+            shifted = [(_transpose(t[0], shift), t[1]) for t in gtk]
+            r2 = ratio([t[:2] for t in pt], shifted)
+            if r2 > max(r, 0.5) + 0.2:
+                r = r2
+                octave_parts.append(gp.partName or f"P{i + 1}")
+        notes.append(r)
+        # Entries without letters ("-" typed as a lyric) are not lyrics
+        lg = [x for t in gtk for x in t[2] if x and any(c.isalpha() for c in x)]
+        lp = [x for t in pt for x in t[2] if x and any(c.isalpha() for c in x)]
         if lg:
             lyrics.append(ratio(lp, lg))
+        per_part.append((gp.partName or f"P{i + 1}", round(notes[-1], 3), round(ratio(lp, lg), 3) if lg else None))
     res["notes"] = round(min(notes), 3)
     def ties(sc):
         return [(pi, round(float(n.offset + n.getContextByClass("Measure").offset), 3), n.tie.type)
@@ -95,6 +117,10 @@ def compare(pred_path, gt_path):
     tg_, tp_ = set(ties(gt)), set(ties(pred))
     res["ties"] = f"{len(tg_ & tp_)}/{len(tg_)}" + (f" +{len(tp_ - tg_)}" if tp_ - tg_ else "")
     res["lyrics"] = round(min(lyrics), 3) if lyrics else None
+    if octave_parts:
+        res["octave_off_in_reference"] = octave_parts
+    if os.environ.get("BENCH_PER_PART"):
+        res["per_part"] = per_part
     tg, tp = time_sigs(gt_path), time_sigs(pred_path)
     res["time"] = "ok" if [x[1:] for x in tg] == [x[1:] for x in tp] else f"{tp} != {tg}"
     res["valid"] = None

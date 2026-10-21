@@ -29,7 +29,9 @@ class LyricLine:
     syllables: List[Syllable] = field(default_factory=list)
 
 
-MUSIC_FONT_HINTS = ("leland", "bravura", "emmentaler", "opus", "mscore", "petaluma", "finale", "maestro", "gonville", "sebastian", "musejazz", "feta")
+MUSIC_FONT_HINTS = ("leland", "bravura", "emmentaler", "opus", "mscore", "petaluma", "finale", "maestro",
+                    "gonville", "sebastian", "musejazz", "feta", "helsinki", "inkpen", "reprise",
+                    "petrucci", "sonata", "engraver", "broadway", "capella")
 
 
 def _is_music_char(c: str, font: str) -> bool:

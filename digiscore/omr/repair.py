@@ -443,12 +443,11 @@ def _add_dot(note, divisions: int) -> None:
         anchor.addnext(dot)
 
 
-def _whole_note_seen(img: np.ndarray, x0: float, x1: float, top: float, interline: float) -> Optional[Tuple[float, float]]:
+def _oval_component(img: np.ndarray, x0: float, x1: float, top: float, interline: float
+                    ) -> Optional[Tuple[float, float]]:
     """
-    An open oval about 1.3-2 spaces wide and one space high (a whole note) in
-    the x range, on or between staff lines or ledger lines. Returns its centre
-    (x, y) or None. Staff-line rows are erased first; the oval's hole is
-    found as a white region fully enclosed by ink.
+    A whole-note-sized blob (staff lines erased, then re-closed vertically) whose
+    middle is paper and whose left and right flanks are ink. Returns its centre.
     """
     import cv2
 
@@ -461,29 +460,96 @@ def _whole_note_seen(img: np.ndarray, x0: float, x1: float, top: float, interlin
     win = (img[ya:yb, xa:xb] < 128).astype(np.uint8)
     k = max(3, int(2.5 * interline))
     lines = cv2.morphologyEx(win, cv2.MORPH_OPEN, np.ones((1, k), np.uint8))
-    ink = win & (1 - lines)
-    # Re-join the oval where a staff line crossed it
-    ink = cv2.morphologyEx(ink, cv2.MORPH_CLOSE, np.ones((max(3, int(0.3 * interline)), 1), np.uint8))
-    n, lab, stats, cent = cv2.connectedComponentsWithStats(ink, connectivity=8)
+    ink0 = win & (1 - lines)
+    ink = cv2.morphologyEx(ink0, cv2.MORPH_CLOSE, np.ones((max(3, int(0.3 * interline)), 1), np.uint8))
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
     for i in range(1, n):
         x, y, bw, bh, area = stats[i]
         if not (1.2 * interline <= bw <= 2.1 * interline and 0.75 * interline <= bh <= 1.3 * interline):
             continue
-        comp = (lab[y:y + bh, x:x + bw] == i).astype(np.uint8)
-        # Holes: background regions inside the bounding box not touching its border
-        bg = 1 - comp
-        nn, hl, hs, _ = cv2.connectedComponentsWithStats(bg, connectivity=4)
-        hole, hole_cy = 0, None
-        for j in range(1, nn):
-            hx, hy, hw, hh, ha = hs[j]
-            if hx > 0 and hy > 0 and hx + hw < bw and hy + hh < bh and ha > hole:
-                hole, hole_cy = ha, hy + hh / 2.0
-        fill = area / float(bw * bh)
-        if hole >= 0.08 * bw * bh and 0.3 <= fill <= 0.85:
-            # The hole's centre is the head's centre; the outline may be thickened
-            # where a staff line was erased and re-closed
-            return xa + x + bw / 2.0, ya + y + hole_cy
+        if not 0.3 <= area / float(bw * bh) <= 0.85:
+            continue
+        comp = (lab[y:y + bh, x:x + bw] == i) & (ink0[y:y + bh, x:x + bw] > 0)
+        r0, r1 = int(0.3 * bh), max(int(0.3 * bh) + 1, int(0.7 * bh))
+        mid = comp[r0:r1, int(0.38 * bw):max(int(0.38 * bw) + 1, int(0.62 * bw))].mean()
+        lf = comp[r0:r1, :max(1, int(0.25 * bw))].mean()
+        rf = comp[r0:r1, int(0.75 * bw):].mean()
+        if mid < 0.2 and lf > 0.45 and rf > 0.45:
+            flanks = comp[:, :max(1, int(0.25 * bw))].any(axis=1) | comp[:, int(0.75 * bw):].any(axis=1)
+            rows = np.where(flanks)[0]
+            cy = (rows[0] + rows[-1]) / 2.0 if len(rows) else bh / 2.0
+            return xa + x + bw / 2.0, ya + y + cy
     return None
+
+
+def _oval_ring(img: np.ndarray, x0: float, x1: float, top: float, bottom: float
+               ) -> Optional[Tuple[float, float]]:
+    """
+    Scan every staff position for a whole-note ring: paper at the centre, thick
+    ink flanks, thin ink above and below, paper just outside on one side at
+    least. Works where a ledger line, accidental or tie touches the oval.
+    """
+    import cv2
+
+    h, w = img.shape
+    sp = (bottom - top) / 4.0
+    ya, yb = int(max(0, top - 5 * sp)), int(min(h, bottom + 5 * sp))
+    xa, xb = int(max(0, x0)), int(min(w, x1))
+    if xb - xa < 1.5 * sp or sp <= 0:
+        return None
+    win = (img[ya:yb, xa:xb] < 128).astype(np.uint8)
+    lines = cv2.morphologyEx(win, cv2.MORPH_OPEN, np.ones((1, max(3, int(1.9 * sp))), np.uint8))
+    ii = cv2.integral((win & (1 - lines)).astype(np.float32))
+    H, W = win.shape
+
+    def frac(cx, cy, dx0, dx1, dy0, dy1):
+        a, b = int(round(cx + dx0 * sp)), int(round(cx + dx1 * sp))
+        c, d = int(round(cy + dy0 * sp)), int(round(cy + dy1 * sp))
+        if a < 0 or c < 0 or b > W or d > H or b <= a or d <= c:
+            return None
+        return (ii[d, b] - ii[c, b] - ii[d, a] + ii[c, a]) / ((b - a) * (d - c))
+
+    best = None
+    for p in range(-8, 17):
+        cy = bottom - p * sp / 2 - ya
+        for cx in range(int(0.9 * sp), W - int(0.9 * sp)):
+            cen = frac(cx, cy, -0.18, 0.18, -0.2, 0.2)
+            if cen is None or cen > 0.15:
+                continue
+            lf, rf = frac(cx, cy, -0.72, -0.45, -0.2, 0.2), frac(cx, cy, 0.45, 0.72, -0.2, 0.2)
+            if lf is None or rf is None or lf < 0.6 or rf < 0.6:
+                continue
+            tp, bt = frac(cx, cy, -0.15, 0.15, -0.5, -0.32), frac(cx, cy, -0.15, 0.15, 0.32, 0.5)
+            if tp is None or bt is None or tp < 0.3 or bt < 0.3:
+                continue
+            ol, orr = frac(cx, cy, -1.05, -0.88, -0.15, 0.15), frac(cx, cy, 0.88, 1.05, -0.15, 0.15)
+            if ol is None or orr is None or min(ol, orr) > 0.4:
+                continue
+            score = lf + rf + tp + bt - 2 * cen
+            if best is None or score > best[0]:
+                best = (score, xa + cx, ya + cy)
+    return None if best is None else (best[1], best[2])
+
+
+def _whole_note_seen(img: np.ndarray, x0: float, x1: float, staff) -> Optional[Tuple[float, float]]:
+    """
+    Centre (x, y) of a whole-note oval in the x range, or None: either a clean
+    hollow blob, or a ring found by scanning the staff positions.
+    """
+    il = staff.interline
+    top, bottom = _local_staff_lines(img, (x0 + x1) / 2.0, staff)
+    sp = (bottom - top) / 4.0
+
+    def on_staff(f):
+        # Within about two ledger lines of the staff: lower down are lyrics
+        return f is not None and -5.5 <= (bottom - f[1]) / (sp / 2.0) <= 13.5
+
+    a = _oval_component(img, x0 + 0.1 * il, x1, staff.top, il)
+    b = _oval_ring(img, x0, x1, top, bottom)
+    a, b = (a if on_staff(a) else None), (b if on_staff(b) else None)
+    if a and b:
+        return b if abs(a[0] - b[0]) < il else a
+    return a or b
 
 
 def repair_missing_whole_notes(xml_content: str, sheets: List[SheetInfo], pdf_path: str) -> Tuple[str, int]:
@@ -513,7 +579,9 @@ def repair_missing_whole_notes(xml_content: str, sheets: List[SheetInfo], pdf_pa
                     if measures is None or sm.measure_index >= len(measures) or key not in bar_len:
                         continue
                     measure = measures[sm.measure_index]
-                    if measure.get("implicit") == "yes":
+                    # A first bar the engine took for a pickup because it missed the
+                    # whole note in it is still a candidate
+                    if measure.get("implicit") == "yes" and sm.measure_index != 0:
                         continue
                     target = bar_len[key]
                     lengths = _voice_lengths(measure, divs[key])
@@ -523,24 +591,138 @@ def repair_missing_whole_notes(xml_content: str, sheets: List[SheetInfo], pdf_pa
                     have = next(iter(lengths.values()), Fraction(0))
                     # A whole note, dotted when it fills a 6/4 or 12/8 bar
                     whole = Fraction(6) if target == 6 else Fraction(4)
-                    # Only an empty bar, or a bar of rests only, is safe to fill
-                    if sung or whole > target or (have and have != target):
-                        continue
                     il = staff.interline
-                    left = sm.left + (0.5 * il if sm.measure_index else 0)
-                    if staff.time_box and staff.time_box[1] > left and staff.time_box[0] < sm.right:
-                        left = staff.time_box[1]
-                    elif staff.key_box and staff.key_box[1] > left and staff.key_box[0] < sm.right:
-                        left = staff.key_box[1]
-                    found = _whole_note_seen(img, left + 0.2 * il, sm.right - 0.2 * il, staff.top, il)
+                    if sung:
+                        # A bar short by exactly a whole note, with room before its
+                        # first note: the whole note was missed at the start
+                        if target - have != Fraction(4) or measure.find("backup") is not None:
+                            continue
+                        first = min((c.x0 for c in sm.chords), default=None)
+                        if first is None:
+                            continue
+                        left = _bar_content_left(sm, staff)
+                        found = _whole_note_seen(img, left + 0.1 * il, first - 0.3 * il, staff)
+                        if found is None:
+                            continue
+                        top, bottom = _local_staff_lines(img, found[0], staff)
+                        _prepend_whole(measure, found[1], top, bottom, divs[key])
+                        fixed += 1
+                        continue
+                    # Only an empty bar, or a bar of rests only, is safe to fill
+                    if whole > target or (have and have != target):
+                        continue
+                    left = _bar_content_left(sm, staff)
+                    found = _whole_note_seen(img, left + 0.1 * il, sm.right - 0.3 * il, staff)
                     if found is None:
                         continue
                     top, bottom = _local_staff_lines(img, found[0], staff)
                     if not _place_whole(measure, found[1], top, bottom, whole, target, divs[key]):
                         continue
                     fixed += 1
+    if fixed:
+        _unmark_full_pickup(root, bar_len, divs)
     out = etree.tostring(root.getroottree(), pretty_print=True, xml_declaration=True, encoding="UTF-8").decode("utf-8")
     return out, fixed
+
+
+def _unmark_full_pickup(root, bar_len, divs) -> None:
+    """
+    When every part's first bar, marked as a pickup, now has its full length,
+    it was a real bar: clear the mark and number the bars from 1.
+    """
+    parts = root.findall("part")
+    firsts = [p.find("measure") for p in parts]
+    if not firsts or any(m is None or m.get("implicit") != "yes" for m in firsts):
+        return
+    full = 0
+    for p, m in zip(parts, firsts):
+        key = (p.get("id"), 0)
+        if key not in bar_len:
+            return
+        if not any(n.find("rest") is None for n in m.findall("note")):
+            continue  # an unused part (split-part placeholder)
+        lengths = _voice_lengths(m, divs[key])
+        if not lengths or max(lengths.values()) != bar_len[key]:
+            return
+        full += 1
+    if not full:
+        return
+    for p in parts:
+        p.find("measure").attrib.pop("implicit", None)
+        for m in p.findall("measure"):
+            num = m.get("number", "")
+            if num.isdigit():
+                m.set("number", str(int(num) + 1))
+
+
+def _bar_content_left(sm, staff) -> float:
+    """Left edge of a bar's notes: after the barline, or after the staff header."""
+    il = staff.interline
+    left = sm.left + 0.5 * il
+    for box in (staff.time_box, staff.key_box, staff.clef_box):
+        if box and box[1] > left and box[0] < sm.right:
+            left = box[1]
+            break
+    if staff.header_stop and staff.header_stop > left and staff.header_start <= sm.left + il:
+        left = max(left, staff.header_stop)
+    return left
+
+
+def _pitch_at(measure, y: float, top: float, bottom: float):
+    """(step, alter, octave) of a head at y, with the clef and key in force at this measure."""
+    clef_sign, clef_line, octave_change, fifths = None, 2, 0, None
+    m = measure
+    while m is not None and (clef_sign is None or fifths is None):
+        a = m.find("attributes")
+        if a is not None:
+            if clef_sign is None and a.find("clef") is not None:
+                clef_sign = a.findtext("clef/sign") or "G"
+                clef_line = int(a.findtext("clef/line") or 2)
+                octave_change = int(a.findtext("clef/clef-octave-change") or 0)
+            if fifths is None and a.find("key/fifths") is not None:
+                fifths = int(a.findtext("key/fifths"))
+        m = m.getprevious()
+        while m is not None and m.tag != "measure":
+            m = m.getprevious()
+    clef_sign = clef_sign or "G"
+    fifths = fifths or 0
+    space = (bottom - top) / 4.0
+    pos = int(round((bottom - y) / (space / 2.0)))
+    ref = {"G": ("E", 4), "F": ("G", 2), "C": ("F", 3)}.get(clef_sign, ("E", 4))
+    if clef_sign == "C" and clef_line == 4:
+        ref = ("D", 3)
+    if clef_sign == "G" and clef_line == 1:
+        ref = ("G", 4)
+    idx = _STEPS.index(ref[0]) + pos
+    step = _STEPS[idx % 7]
+    octave = ref[1] + idx // 7 + octave_change
+    sharps = "FCGDAEB"[:fifths] if fifths > 0 else ""
+    flats = "BEADGCF"[:-fifths] if fifths < 0 else ""
+    alter = 1 if step in sharps else -1 if step in flats else 0
+    return step, alter, octave
+
+
+def _note_el(step, alter, octave, length: Fraction, division: int, voice: str):
+    note = etree.Element("note")
+    p = etree.SubElement(note, "pitch")
+    etree.SubElement(p, "step").text = step
+    if alter:
+        etree.SubElement(p, "alter").text = str(alter)
+    etree.SubElement(p, "octave").text = str(octave)
+    etree.SubElement(note, "duration").text = str(int(length * division))
+    etree.SubElement(note, "voice").text = voice
+    etree.SubElement(note, "type").text = "whole"
+    if length == Fraction(6):
+        etree.SubElement(note, "dot")
+    return note
+
+
+def _prepend_whole(measure, y: float, top: float, bottom: float, division: int) -> None:
+    """Insert a whole note before the bar's first note."""
+    step, alter, octave = _pitch_at(measure, y, top, bottom)
+    first = next(n for n in measure.findall("note"))
+    voice = first.findtext("voice") or "1"
+    first.addprevious(_note_el(step, alter, octave, Fraction(4), division, voice))
 
 
 _STEPS = "CDEFGAB"
@@ -552,11 +734,13 @@ def _local_staff_lines(img: np.ndarray, x: float, staff) -> Tuple[float, float]:
     h, w = img.shape
     xa, xb = int(max(0, x - 6 * il)), int(min(w, x + 6 * il))
     ya, yb = int(max(0, staff.top - 1.5 * il)), int(min(h, staff.bottom + 1.5 * il))
-    prof = (img[ya:yb, xa:xb] < 128).mean(axis=1)
-    # Staff lines: rows mostly dark across the window; group them into lines
+    # Darkness per row: staff lines are the darkest rows across the window
+    # (on a grey scan they may never reach pure black)
+    prof = (255.0 - img[ya:yb, xa:xb].astype(np.float32)).mean(axis=1) / 255.0
+    cut = max(0.25, 0.55 * float(prof.max())) if prof.size else 1.0
     lines, run = [], []
     for i, v in enumerate(prof):
-        if v > 0.5:
+        if v > cut:
             run.append(i)
         elif run:
             lines.append(ya + (run[0] + run[-1]) / 2.0)
@@ -581,55 +765,17 @@ def _local_staff_lines(img: np.ndarray, x: float, staff) -> Tuple[float, float]:
 def _place_whole(measure, y: float, top: float, bottom: float, length: Fraction, target: Fraction,
                  division: int) -> bool:
     """Replace the bar's rests with one note of the given length at the pitch of y."""
-    # Clef and key in force: read from the measure or its predecessors
-    clef_sign, clef_line, octave_change, fifths = "G", 2, 0, 0
-    m = measure
-    while m is not None:
-        a = m.find("attributes")
-        if a is not None:
-            if a.find("clef") is not None and clef_sign == "G" and clef_line == 2 and octave_change == 0:
-                clef_sign = a.findtext("clef/sign") or "G"
-                clef_line = int(a.findtext("clef/line") or 2)
-                octave_change = int(a.findtext("clef/clef-octave-change") or 0)
-            if a.find("key/fifths") is not None and fifths == 0:
-                fifths = int(a.findtext("key/fifths"))
-        m = m.getprevious()
-        while m is not None and m.tag != "measure":
-            m = m.getprevious()
-    # Steps above the bottom line (bottom line = 0)
-    # Five lines span four spaces
-    space = (bottom - top) / 4.0
-    pos = int(round((bottom - y) / (space / 2.0)))
-    ref = {"G": ("E", 4), "F": ("G", 2), "C": ("F", 3)}.get(clef_sign, ("E", 4))
-    if clef_sign == "C" and clef_line == 4:
-        ref = ("D", 3)
-    if clef_sign == "G" and clef_line == 1:
-        ref = ("G", 4)
-    idx = _STEPS.index(ref[0]) + pos
-    step = _STEPS[idx % 7]
-    octave = ref[1] + idx // 7 + octave_change
-    sharps = "FCGDAEB"[:fifths] if fifths > 0 else ""
-    flats = "BEADGCF"[:-fifths] if fifths < 0 else ""
-    alter = 1 if step in sharps else -1 if step in flats else 0
-
+    step, alter, octave = _pitch_at(measure, y, top, bottom)
     voice = next((n.findtext("voice") for n in measure.findall("note") if n.findtext("voice")), "1")
     for n in measure.findall("note"):
         measure.remove(n)
-    note = etree.Element("note")
-    p = etree.SubElement(note, "pitch")
-    etree.SubElement(p, "step").text = step
-    if alter:
-        etree.SubElement(p, "alter").text = str(alter)
-    etree.SubElement(p, "octave").text = str(octave)
-    etree.SubElement(note, "duration").text = str(int(length * division))
-    etree.SubElement(note, "voice").text = voice
-    etree.SubElement(note, "type").text = "whole"
-    if length == Fraction(6):
-        etree.SubElement(note, "dot")
     rest_after = target - length
     bl = [c for c in measure if c.tag == "barline" and c.get("location") == "right"]
     anchor = bl[0] if bl else None
-    for el in [note] + ([_rest_el(rest_after, division, voice)] if rest_after else []):
+    els = [_note_el(step, alter, octave, length, division, voice)]
+    if rest_after:
+        els.append(_rest_el(rest_after, division, voice))
+    for el in els:
         if anchor is not None:
             anchor.addprevious(el)
         else:

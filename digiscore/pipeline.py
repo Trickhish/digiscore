@@ -257,7 +257,8 @@ def convert_score(
                     xml_content, _ = repair_missing_dots(xml_content, book, omr_input)
                     xml_content, _ = repair_missing_rests(xml_content, book, omr_input)
                     from digiscore.omr.repair import repair_missing_whole_notes
-                    xml_content, _ = repair_missing_whole_notes(xml_content, book, omr_input)
+                    # The original image keeps the ovals open better than the cleaned-up copy
+                    xml_content, _ = repair_missing_whole_notes(xml_content, book, abs_input)
                 except Exception as e:
                     warnings.warn(f"Measure repair skipped: {e}")
                 # Bars that still do not add up: onsets from the other staves

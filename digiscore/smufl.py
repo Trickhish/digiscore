@@ -38,6 +38,8 @@ OPUS_MAPPING: Dict[str, str] = {
     "w": "noteheadWhole",           # w
     "W": "noteheadDoubleWhole",     # W
     "&": "gClef",                   # &
+    "V": "gClef8vb",                # V (tenor treble clef, Maestro / Helsinki)
+    "t": "fClef8vb",
     "?": "fClef",                   # ?
     "B": "cClef",                   # B
     "#": "accidentalSharp",
@@ -53,6 +55,13 @@ OPUS_MAPPING: Dict[str, str] = {
     "R": "flag16thDown",
     "r": "flag16thUp",
     "k": "augmentationDot",
+    ".": "augmentationDot",         # Finale Maestro, Helsinki
+    "\u00ba": "noteheadBlack",      # º (Maestro: small/cue head on some versions)
+    "\u00d4": "restHalf",           # Ô
+    "\u00ee": "restWhole",          # î
+    "\u00a8": "rest8th",            # ¨
+    "\u00e4": "rest8th",            # ä
+    "\u00c5": "rest16th",           # Å
     "c": "timeSigCommon",
     "C": "timeSigCutCommon",
     **_TIME_DIGITS,
@@ -82,6 +91,24 @@ MSCORE2_MAPPING: Dict[str, str] = {
 }
 
 
+# Fonts laid out like Adobe Sonata: Sibelius Opus and Helsinki, Finale Maestro,
+# Petrucci, Engraver, Jazz, Broadway
+SONATA_LAYOUT_SPECIAL = ("OpusSpecial", "HelsinkiSpecial", "InkpenSpecial", "ReprisSpecial")
+SONATA_LAYOUT_FONTS = ("Opus", "Helsinki", "Inkpen", "Reprise", "Maestro", "Petrucci", "Sonata",
+                       "Engraver", "Jazz", "Broadway", "Golden")
+
+
+def _symbol_char(char: str) -> str:
+    """
+    Symbol-encoded fonts (older Sibelius and Finale PDFs) put the glyph at
+    U+F000 + its Mac Roman code: map back to the character the layout uses.
+    """
+    cp = ord(char)
+    if 0xF020 <= cp <= 0xF0FF:
+        return bytes([cp - 0xF000]).decode("mac_roman")
+    return char
+
+
 def _base_font(font_name: str) -> str:
     # Strip subset prefixes such as "ABCDEF+"
     return font_name.split("+", 1)[-1]
@@ -93,10 +120,10 @@ def get_glyph_name(char: str, font_name: str = "") -> Optional[str]:
     base = _base_font(font_name)
 
     # Legacy (pre-SMuFL) music fonts first: their codepoints overlap SMuFL ones
-    if base.startswith("OpusSpecial"):
-        return OPUS_SPECIAL_MAPPING.get(char)
-    if base.startswith("Opus"):
-        return OPUS_MAPPING.get(char)
+    if base.startswith(SONATA_LAYOUT_SPECIAL):
+        return OPUS_SPECIAL_MAPPING.get(_symbol_char(char))
+    if base.startswith(SONATA_LAYOUT_FONTS):
+        return OPUS_MAPPING.get(_symbol_char(char))
     if base == "MScoreRegular":
         return MSCORE2_MAPPING.get(char)
 
