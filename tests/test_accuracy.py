@@ -138,6 +138,8 @@ CPDL_GOOD = {
     "Ad_te": 1.0, "D-Ju_MS_33_Ab_Hoc_Familia": 1.0, "Vierendeels-ad_coenam": 1.0,
     "Nh_Aiblinger_VP_01_Dixit": 1.0, "Nh_Reichard_Abends": 1.0, "Selig_sind_die_Toten": 0.99,
     "Ad_te_levavi_Balbi": 0.98, "Nh_SchumannCL_Abendfeier": 0.98, "Nh_Heim_Ade_zur_guten_Nacht": 0.98,
+    "Ad_Dominum_Scarlatti": 0.97, "Ad_te_levavi_Witt": 0.99, "Psalm_89.2_Becker_Psalter": 0.96,
+    "AcworthHolyoke1803bxm": 0.82,
     "Abisso_e_fuoco_della_tua_carità": 0.96, "Ave_VerumSATB": 0.96, "Nh_Andre_Abendlied": 0.95,
     # capella, LilyPond, driver-renamed and Type3 music fonts
     "Hane-ach": 1.0, "Hassler-Ach_Gott_vom_Himmel": 1.0, "Treue_Liebe": 1.0,
