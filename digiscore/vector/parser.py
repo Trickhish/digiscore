@@ -271,6 +271,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         page_staves = p_info["staves"]
 
         for sys in p_info["systems"]:
+            upper_lyrics = []
             for s_idx, staff in enumerate(sys.staves):
                 p_idx_for_staff = staff.part_idx
 
@@ -421,6 +422,13 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                     staff_x_max=staff.x_max,
                     styled=styled_words,
                 )
+                # Two-staff choir layout (SA / TB): words printed between the
+                # staves are sung by all voices when the lower staff has none
+                if (not lyric_lines and s_idx == 1 and len(sys.staves) == 2
+                        and upper_lyrics and staff.clef_sign == "F"):
+                    lyric_lines = upper_lyrics
+                if s_idx == 0:
+                    upper_lyrics = lyric_lines
                 match_syllables_to_notes(staff_notes_raw, lyric_lines)
 
                 # Extract barlines and create measures

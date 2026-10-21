@@ -73,6 +73,18 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
                     if not a["c"].isspace() and not b["c"].isspace())
     # Near the top of the gaps seen inside runs: what spacing a word may have
     letter_gap = {f: sorted(g)[int(len(g) * 0.9)] for f, g in gaps.items() if len(g) >= 20}
+    # Main text size of the page (by characters); clearly smaller text is
+    # footers, credits, editorial notes rather than lyrics
+    sizes: dict = {}
+    for block in raw.get("blocks", []):
+        for line in block.get("lines", []):
+            for span in line.get("spans", []):
+                f = span.get("font", "")
+                n = sum(1 for ch in span.get("chars", []) if ch["c"].isalpha() and not _is_music_char(ch["c"], f))
+                if n:
+                    k = round(span.get("size", 0.0), 1)
+                    sizes[k] = sizes.get(k, 0) + n
+    main_size = max(sizes, key=sizes.get) if sizes else 0.0
     for block in raw.get("blocks", []):
         for line in block.get("lines", []):
             for span in line.get("spans", []):
@@ -91,9 +103,16 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
                     gap_limit = max(gap_limit, 2.0 * usual)
                 cur = None
                 n_before = len(tokens)
+                asc = span.get("ascender", 0.8) or 0.8
+                desc = span.get("descender", -0.2) or -0.2
                 for ch in span.get("chars", []):
                     c = ch["c"]
                     bx0, by0, bx1, by1 = ch["bbox"]
+                    # Squashed glyph boxes (some fonts report near-zero height):
+                    # rebuild from origin, size and font metrics
+                    if by1 - by0 < 0.3 * size and "origin" in ch:
+                        oy = ch["origin"][1]
+                        by0, by1 = oy - asc * size, oy - desc * size
                     if c.isspace() or _is_music_char(c, font):
                         if cur:
                             tokens.append(tuple(cur))
@@ -112,7 +131,7 @@ def extract_text_tokens(page, gap_ratio: float = 0.032) -> List[Tuple]:
                         cur[4] += c
                 if cur:
                     tokens.append(tuple(cur))
-                if styled:
+                if styled or size < 0.85 * main_size:
                     _STYLED.update(tokens[n_before:])
     # Lyric hyphens are often drawn as short horizontal strokes rather than text
     for d in page.get_drawings():
