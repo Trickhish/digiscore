@@ -269,3 +269,20 @@ def test_split_voices_xml_matches_vector_split(tmp_path):
         hx, hy = set(heads(px)), set(heads(py))
         assert len(hx & hy) >= 0.95 * len(hy)
         assert sum(1 for n in px.recurse().notes if n.lyrics) >= 0.9 * sum(1 for n in py.recurse().notes if n.lyrics)
+
+
+@pytest.mark.parametrize("folder,stem,marks", [
+    ("cpdl", "Nh_Mendelssohn_Abendlied_19_4", 3),
+    ("cpdl", "Izawa_adominofactumestistud", 8),
+    ("cpdl", "Franck-Ach_herr_mich_armen_Sünder", 4),
+    ("musetrainer", "Waltz_in_A_MinorChopin", 4),
+    ("synthetic", "synthetic-004-2-4", 2),
+])
+def test_repeats_and_endings(folder, stem, marks, tmp_path):
+    import sys
+    sys.path.insert(0, "tools")
+    from bench_synthetic import structure_score
+    pdf = f"examples/{folder}/{stem}.pdf"
+    out = str(tmp_path / "out.musicxml")
+    convert_score(pdf, out, engine="vector", use_ai=False)
+    assert structure_score(out, pdf[:-4] + ".mxl") == f"{marks}/{marks}"

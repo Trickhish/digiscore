@@ -9,6 +9,7 @@ scanned-score path on the same material.
 
 import argparse
 import re
+import zipfile
 import difflib
 import glob
 import io
@@ -127,6 +128,63 @@ def _sung_only(score, n_pred):
     return score
 
 
+def structure(path):
+    """
+    The repeat structure of a score's first part, in bar order: forward and
+    backward repeats, and the start of each volta ending with its numbers.
+    Bars carrying nothing are left out, so the list compares across a shifted
+    bar numbering.
+    """
+    tree = etree.parse(path) if not zipfile.is_zipfile(path) else None
+    if tree is None:
+        with zipfile.ZipFile(path) as z:
+            name = next(n for n in z.namelist()
+                        if n.endswith((".xml", ".musicxml")) and not n.startswith("META-INF"))
+            tree = etree.fromstring(z.read(name))
+    root = tree if isinstance(tree, etree._Element) else tree.getroot()
+    part = root.find("part")
+    out = []
+    if part is None:
+        return out
+    for k, m in enumerate(part.findall("measure")):
+        marks = []
+        for bl in m.findall("barline"):
+            r = bl.find("repeat")
+            if r is not None:
+                marks.append("|:" if r.get("direction") == "forward" else ":|")
+            e = bl.find("ending")
+            if e is not None and e.get("type") == "start":
+                marks.append("[" + re.sub(r"\s", "", e.get("number", "")))
+        for mk in sorted(set(marks)):
+            out.append((k, mk))
+    return out
+
+
+def structure_score(pred_path, gt_path) -> str:
+    """'found/expected' repeat marks (+extra), matched by kind within a few bars."""
+    g, p = structure(gt_path), structure(pred_path)
+    used, hit = set(), 0
+    def kind(mk):
+        # A volta counts by where it is; its label ("1, 2" or "1") is the printed one
+        return "[" if mk.startswith("[") else mk
+    for k, mk in g:
+        j = next((j for j, (k2, m2) in enumerate(p) if j not in used and kind(m2) == kind(mk) and abs(k2 - k) <= 3), None)
+        if j is not None:
+            used.add(j)
+            hit += 1
+    extra = len(p) - len(used)
+    return f"{hit}/{len(g)}" + (f" +{extra}" if extra else "")
+
+
+def _sum_frac(xs) -> str:
+    hit = tot = extra = 0
+    for x in xs:
+        m = re.match(r"(\d+)/(\d+)(?: \+(\d+))?", x)
+        if m:
+            hit += int(m[1]); tot += int(m[2]); extra += int(m[3] or 0)
+    return f"{hit}/{tot}" + (f" +{extra}" if extra else "")
+
+
 def compare(pred_path, gt_path, choir=False):
     pred, gt = music21.converter.parse(pred_path), music21.converter.parse(gt_path)
     if choir:
@@ -190,6 +248,7 @@ def compare(pred_path, gt_path, choir=False):
     tp_ = best
     res["ties"] = f"{len(tg_ & tp_)}/{len(tg_)}" + (f" +{len(tp_ - tg_)}" if tp_ - tg_ else "")
     res["lyrics"] = round(min(lyrics), 3) if lyrics else None
+    res["repeats"] = structure_score(pred_path, gt_path)
     if octave_parts:
         res["octave_off_in_reference"] = octave_parts
     if os.environ.get("BENCH_PER_PART"):
@@ -238,7 +297,8 @@ def main():
               f" | mean onsets {sum(r.get('onsets', 0) for r in ok)/len(ok):.3f}"
               f" | perfect notes {sum(r['notes'] == 1 for r in ok)}"
               f" | time ok {sum(r['time'] == 'ok' for r in ok)}"
-              f" | valid {sum(bool(r['valid']) for r in ok)}")
+              f" | valid {sum(bool(r['valid']) for r in ok)}"
+              f" | repeats {_sum_frac([r.get('repeats', '0/0') for r in ok])}")
 
 
 if __name__ == "__main__":

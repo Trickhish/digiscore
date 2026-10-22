@@ -125,6 +125,17 @@ def build_musicxml(
                     co_elem = etree.SubElement(clef_elem, "clef-octave-change")
                     co_elem.text = str(clef_octave)
 
+            # Start of a repeat, and the start of a volta ending, on the left barline
+            if m.get("start_repeat") or m.get("ending_start"):
+                bl_elem = etree.SubElement(meas_elem, "barline", location="left")
+                if m.get("start_repeat"):
+                    etree.SubElement(bl_elem, "bar-style").text = "heavy-light"
+                if m.get("ending_start"):
+                    etree.SubElement(bl_elem, "ending", number=m["ending_start"], type="start").text = \
+                        m.get("ending_text") or f"{m['ending_start']}."
+                if m.get("start_repeat"):
+                    etree.SubElement(bl_elem, "repeat", direction="forward")
+
             # Direction (Tempo mark) on first measure if available
             tempo = score_data.get("tempo")
             if m_idx == 0 and tempo:
@@ -164,10 +175,16 @@ def build_musicxml(
 
             # End barline (repeats)
             end_bl = m.get("end_barline")
-            if end_bl and end_bl.get("repeat_direction") == "backward":
+            backward = bool(end_bl and end_bl.get("repeat_direction") == "backward")
+            if backward or m.get("ending_stop"):
                 bl_elem = etree.SubElement(meas_elem, "barline", location="right")
-                etree.SubElement(bl_elem, "bar-style").text = "light-heavy"
-                etree.SubElement(bl_elem, "repeat", direction="backward")
+                if backward:
+                    etree.SubElement(bl_elem, "bar-style").text = "light-heavy"
+                if m.get("ending_stop"):
+                    num, kind = m["ending_stop"]
+                    etree.SubElement(bl_elem, "ending", number=num, type=kind)
+                if backward:
+                    etree.SubElement(bl_elem, "repeat", direction="backward")
 
     xml_bytes = etree.tostring(
         root,

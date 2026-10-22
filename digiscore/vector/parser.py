@@ -10,7 +10,7 @@ from digiscore.vector.ties import find_arcs, mark_ties
 from digiscore.smufl import detect_capella_aliases, detect_named_fonts, glyph_trace, detect_mscore_flavour, get_glyph_name, is_clef, is_notehead, is_rest
 from digiscore.vector.duration import resolve_note_durations
 from digiscore.vector.lyrics import extract_lyrics_for_staff, extract_text_tokens, match_syllables_to_notes, styled_tokens
-from digiscore.vector.measure import create_measures_for_staff, extract_barlines_for_staff
+from digiscore.vector.measure import create_measures_for_staff, extract_barlines_for_staff, find_endings, find_repeat_dots
 from digiscore.vector.pitch import calculate_pitch_from_y
 from digiscore.vector.staff import Staff, System, detect_staves_on_page, group_staves_into_systems
 from digiscore.vector.stems import extract_stems_and_beams, find_stem_for_note
@@ -790,6 +790,7 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         words = p_info["words"]
         styled_words = p_info.get("styled_words", set())
         drawings = p_info["drawings"]
+        page = doc[p_idx]
         tie_arcs = find_arcs(drawings)
 
         # Separate glyph types
@@ -811,6 +812,12 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
         for sys in p_info["systems"]:
             _fill_absent_parts(parts, part_measure_counters, sys, fill_state)
             upper_lyrics = []
+            # Volta brackets sit above the system's top staff and hold for all
+            sys_endings = []
+            if sys.staves:
+                top_staff = sys.staves[0]
+                bxs = [b.x for b in extract_barlines_for_staff(drawings, top_staff)]
+                sys_endings = find_endings(page, drawings, words, top_staff, barline_xs=bxs)
             for s_idx, staff in enumerate(sys.staves):
                 p_idx_for_staff = staff.part_idx
                 info = part_info.setdefault(p_idx_for_staff, {"labels": [], "braced": 0, "staves": 0})
@@ -990,8 +997,16 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                 match_syllables_to_notes(staff_notes_raw, lyric_lines)
 
                 # Extract barlines and create measures
+                # Repeat dots seen as ink beside each barline (any font)
+                bare = extract_barlines_for_staff(drawings, staff, noteheads=[
+                    n for n in staff_notes_raw if not n["is_rest"]])
+                symbol_boxes = [tuple(g["bbox"]) for g in glyphs
+                                if g.get("bbox") and not g["name"].lower().startswith(("repeat", "augmentation"))
+                                and staff.top_y - 2 <= g["y"] <= staff.bottom_y + 6
+                                and g["name"].startswith(("timeSig", "clef", "gClef", "fClef", "cClef", "accidental", "rest"))]
+                staff_repeat_dots = repeat_dots + find_repeat_dots(page, staff, bare, exclude=symbol_boxes)
                 barlines = extract_barlines_for_staff(
-                    drawings, staff, repeat_dots=repeat_dots,
+                    drawings, staff, repeat_dots=staff_repeat_dots,
                     # Any head of the page: a stem may cross into this staff
                     # from a note of the staff above or below
                     noteheads=[n for n in staff_notes_raw if not n["is_rest"]] + [
@@ -1082,8 +1097,31 @@ def parse_vector_score(doc: pymupdf.Document) -> dict:
                         [[_note_out(n, v_idx + 1) for n in ev] for ev in events]
                         for v_idx, events in enumerate(voices)
                     ]
-                    if m.end_barline and m.end_barline.repeat_direction:
-                        m_dict["end_barline"] = {"repeat_direction": m.end_barline.repeat_direction}
+                    if m.end_barline and m.end_barline.repeat_direction == "backward":
+                        m_dict["end_barline"] = {"repeat_direction": "backward"}
+                    # A barline with dots on both sides ends one repeat and starts
+                    # the next: the dots after it open this bar's repeat
+                    sb = m.start_barline
+                    if sb is not None and (sb.repeat_direction == "forward" or getattr(sb, "forward_too", False)):
+                        m_dict["start_repeat"] = True
+                    # A volta bracket covers the bars under it: the first such bar
+                    # starts the ending, the last one ends it
+                    for e in sys_endings:
+                        sp_ = staff.line_spacing
+                        x1e = e["x1"] if e["x1"] is not None else e["x0"] + 2 * sp_
+                        under = [mm for mm in measures if mm.x1 > e["x0"] + sp_ and mm.x0 < x1e - sp_
+                                 and (mm.x0 + mm.x1) / 2 > e["x0"] - sp_]
+                        if e["x1"] is None:
+                            under = under[:1]
+                        if not under:
+                            continue
+                        if m is under[0]:
+                            m_dict["ending_start"] = e["number"]
+                            m_dict["ending_text"] = e["text"]
+                        if m is under[-1]:
+                            closed = e.get("closed") or (m.end_barline is not None and
+                                                         m.end_barline.repeat_direction == "backward")
+                            m_dict["ending_stop"] = (e["number"], "stop" if closed else "discontinue")
 
                     parts[p_idx_for_staff]["measures"].append(m_dict)
 
