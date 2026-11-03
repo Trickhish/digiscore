@@ -464,16 +464,21 @@ def relyric(
                     x1 = min(img.width, int(ll.x1 + 2 * staff.interline))
                     crop = img.crop((x0, max(0, int(ll.y0) - pad_y), x1, min(img.height, int(ll.y1) + pad_y)))
                     syls = syllables_from_boxes(_ocr_boxes(crop, langs, tessdata), x0, staff.interline)
-                    mapping = assign_to_chords(syls, chords, staff.interline)
-                    if not mapping:
+                    if not syls:
                         continue
-                    if vision is not None:
-                        proofread_jobs.append((crop, chords, mapping))
                     touched_parts.add(staff.part_id)
-                    placed.append((staff, ll.verse, mapping))
+                    job = {"crop": crop, "syls": syls, "chords": chords, "staff": staff,
+                           "verse": ll.verse}
+                    proofread_jobs.append(job)
 
-    if proofread_jobs:
+    if vision is not None and proofread_jobs:
         _proofread(vision, proofread_jobs)
+
+    for job in proofread_jobs:
+        staff = job["staff"]
+        mapping = assign_to_chords(job["syls"], job["chords"], staff.interline)
+        if mapping:
+            placed.append((staff, job["verse"], mapping))
 
     for staff, verse, mapping in placed:
         for m in staff.measures:
@@ -518,18 +523,78 @@ def relyric(
     return etree.tostring(root.getroottree(), pretty_print=True, xml_declaration=True, encoding="UTF-8").decode("utf-8")
 
 
+def respace(syls: List[OcrSyllable], texts: List[str]) -> Optional[List[OcrSyllable]]:
+    """
+    Give a corrected reading of a line (its syllables as printed) the
+    positions of the OCR's syllables: the line's characters are matched in
+    order, and each corrected syllable spans the boxes of its characters.
+    """
+    import difflib
+    chars = []
+    for s in syls:
+        cs = s.chars or [(ch, s.x0 + (s.x1 - s.x0) * k / max(1, len(s.text)),
+                          s.x0 + (s.x1 - s.x0) * (k + 1) / max(1, len(s.text))) for k, ch in enumerate(s.text)]
+        chars.extend(cs)
+    if not chars or not texts:
+        return None
+
+    def norm(c):
+        import unicodedata
+        return unicodedata.normalize("NFD", c.lower())[0]
+    a = [norm(c[0]) for c in chars]
+    b_chars = [(k, ch) for k, t in enumerate(texts) for ch in t]
+    b = [norm(ch) for _, ch in b_chars]
+    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    pos: Dict[int, Tuple[float, float]] = {}
+    for blk in sm.get_matching_blocks():
+        for t in range(blk.size):
+            pos[blk.b + t] = (chars[blk.a + t][1], chars[blk.a + t][2])
+    if len(pos) < 0.5 * len(b):
+        return None
+    out: List[OcrSyllable] = []
+    for k, t in enumerate(texts):
+        idx = [i for i, (kk, _) in enumerate(b_chars) if kk == k]
+        known = [pos[i] for i in idx if i in pos]
+        if not known:
+            # No character matched: between its neighbours
+            left = max((pos[i][1] for i in pos if i < idx[0]), default=None)
+            right = min((pos[i][0] for i in pos if i > idx[-1]), default=None)
+            if left is None or right is None or right <= left:
+                return None
+            x0, x1 = left, right
+        else:
+            x0, x1 = min(p[0] for p in known), max(p[1] for p in known)
+        out.append(OcrSyllable(t, x0, x1, hyphen_after=False, hyphen_before=False))
+    # Hyphens: from the OCR syllable the corrected one sits in
+    for o in out:
+        src = min(syls, key=lambda s: abs(s.cx - o.cx))
+        inside = [s for s in syls if s.x0 - 1 <= o.cx <= s.x1 + 1]
+        src = inside[0] if inside else src
+        if o.x1 >= src.x1 - 1:
+            o.hyphen_after = src.hyphen_after
+        if o.x0 <= src.x0 + 1:
+            o.hyphen_before = src.hyphen_before
+    # Pieces of one OCR syllable split by the reading are joined by a hyphen
+    for o1, o2 in zip(out, out[1:]):
+        if any(s.x0 - 1 <= o1.cx <= s.x1 + 1 and s.x0 - 1 <= o2.cx <= s.x1 + 1 for s in syls):
+            o1.hyphen_after = True
+    return out
+
+
 def _proofread(vision, jobs) -> None:
-    """Correct syllable texts in place with the vision model, several lines at once."""
+    """
+    Read each line again with the vision model, helped by the OCR's guess,
+    and give the reading the OCR's positions (in place, on job["syls"]).
+    """
     from concurrent.futures import ThreadPoolExecutor
 
     def run(job):
-        crop, chords, mapping = job
-        order = [c.id for c in sorted(chords, key=lambda c: c.cx) if c.id in mapping]
-        texts = [mapping[cid][0] for cid in order]
-        fixed = vision.correct_lyric_line(_png_bytes(crop), texts)
-        if fixed:
-            for cid, t in zip(order, fixed):
-                mapping[cid] = (t, mapping[cid][1])
+        syls = job["syls"]
+        texts = vision.read_lyric_line(_png_bytes(job["crop"]), [s.text for s in syls])
+        if texts:
+            new = respace(syls, texts)
+            if new:
+                job["syls"] = new
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         list(pool.map(run, jobs))

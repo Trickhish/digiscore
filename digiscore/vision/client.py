@@ -158,26 +158,27 @@ class VisionClient:
             # Fallback gracefully if AI is unavailable or fails
             return {"error": str(e)}
 
-    def correct_lyric_line(self, image_png: bytes, syllables: List[str]) -> Optional[List[str]]:
+    def read_lyric_line(self, image_png: bytes, syllables: List[str]) -> Optional[List[str]]:
         """
-        Correct OCR mistakes in one line of sung lyrics.
+        Read one line of sung lyrics from its image, helped by the OCR's guess.
 
-        `syllables` are the syllables already placed on the notes, in order. The model
-        sees the line image and returns one corrected string per syllable, so the
-        alignment with the notes cannot change. Returns None when unavailable or
-        when the answer does not have the same number of items.
+        Returns the syllables as printed, in order (one per sung note: words
+        hyphenated as printed are separate items), or None when unavailable.
+        The caller aligns them with the notes, so the count may differ from the
+        OCR's (merged or missed syllables are the OCR's usual mistakes).
         """
         if not self.is_available or not syllables:
             return None
         prompt = (
-            "This image is one line of lyrics printed under a music staff. An OCR read it "
-            "as the following syllables, one per sung note, in order:\n"
+            "This image is one line of lyrics printed under a music staff. Each syllable "
+            "sung on its own note is printed separately; syllables of one word are joined "
+            "by hyphens. An OCR read the line as:\n"
             f"{json.dumps(syllables, ensure_ascii=False)}\n\n"
-            "Fix only reading mistakes using the image: wrong or missing letters, accents "
-            "(e.g. O vs Ô, e vs é/è), apostrophes, and punctuation attached to a syllable. "
-            "Do not merge, split, add or remove items, and do not include hyphens. "
-            "If an item is unreadable, keep it as it is.\n"
-            f"Return ONLY a JSON array of exactly {len(syllables)} strings."
+            "The OCR often merges two neighbouring syllables into one item, misses some, "
+            "and misreads letters and accents. Using the image, return every syllable of "
+            "the line in order, one item per syllable as printed, with its accents and "
+            "attached punctuation, without hyphens. Leave out verse numbers.\n"
+            "Return ONLY a JSON array of strings."
         )
         messages = [{
             "role": "user",
@@ -186,25 +187,45 @@ class VisionClient:
                 {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(image_png).decode()}},
             ],
         }]
-        try:
-            raw = self._chat_completion(messages, max_tokens=60 + 12 * len(syllables))
-        except Exception:
+        items = None
+        for _ in range(3):
+            try:
+                raw = self._chat_completion(messages, max_tokens=80 + 14 * len(syllables))
+            except Exception:
+                continue
+            match = re.search(r"\[.*\]", raw, re.DOTALL)
+            if not match:
+                continue
+            try:
+                items = json.loads(match.group(0))
+            except Exception:
+                continue
+            if isinstance(items, list):
+                break
+            items = None
+        if not items:
             return None
-        match = re.search(r"\[.*\]", raw, re.DOTALL)
-        if not match:
+        out = [str(x).strip().strip("-").strip() for x in items]
+        out = [x for x in out if x]
+        # Where the reading only cuts the OCR's letters differently, without
+        # an OCR syllable that ran two together, keep the OCR's syllables
+        out = _keep_ocr_cuts(syllables, out)
+        # A reading far from the OCR's is a misread line (or the model's own text)
+        joined_a = "".join(syllables).lower()
+        joined_b = "".join(out).lower()
+        if not out or not _close_text(joined_a, joined_b):
             return None
-        try:
-            fixed = json.loads(match.group(0))
-        except Exception:
-            return None
-        if not isinstance(fixed, list) or len(fixed) != len(syllables):
-            return None
-        out = []
-        for old, new in zip(syllables, fixed):
-            new = str(new).strip().strip("-")
-            # Guard against rewrites: keep the OCR text unless the change is small
-            out.append(new if new and _close(old, new) else old)
         return out
+
+    def correct_lyric_line(self, image_png: bytes, syllables: List[str]) -> Optional[List[str]]:
+        """
+        Correct OCR mistakes in one line of sung lyrics, one string per given
+        syllable (kept for callers that need the same count).
+        """
+        items = self.read_lyric_line(image_png, syllables)
+        if not items or len(items) != len(syllables):
+            return None
+        return [new if _close(old, new) else old for old, new in zip(syllables, items)]
 
     def verify_and_clean_lyrics(self, lyrics_text: str, language: str = "French") -> str:
         """
@@ -226,6 +247,81 @@ class VisionClient:
             return self._chat_completion(messages, max_tokens=1000).strip()
         except Exception:
             return lyrics_text
+
+
+def _keep_ocr_cuts(ocr: List[str], read: List[str]) -> List[str]:
+    """
+    The reading may split an OCR syllable (two syllables merged by the OCR)
+    and fix letters, but not move a boundary the OCR saw: where the reading
+    joins letters across an OCR boundary ("luctus in" read as "luc tu sin"),
+    that stretch keeps the OCR's syllables.
+    """
+    import difflib
+
+    a = "".join(ocr).lower()
+    b = "".join(read).lower()
+    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    a_of_b = {}
+    for blk in sm.get_matching_blocks():
+        for t in range(blk.size):
+            a_of_b[blk.b + t] = blk.a + t
+    bounds_a = set()
+    k = 0
+    for x in ocr:
+        k += len(x)
+        bounds_a.add(k)
+    # Reading items with their letter span in the OCR text (None when unmatched)
+    spans = []
+    k = 0
+    for x in read:
+        idx = [a_of_b.get(k + t) for t in range(len(x))]
+        k += len(x)
+        got = [i for i in idx if i is not None]
+        spans.append((min(got), max(got) + 1) if got else None)
+    ocr_spans = []
+    k = 0
+    for x in ocr:
+        ocr_spans.append((k, k + len(x)))
+        k += len(x)
+    # Group reading items and OCR syllables that share letters; a group of
+    # one OCR syllable takes the reading (merged syllables split, letters
+    # fixed); a group of several keeps the OCR's cut (the reading moved a
+    # boundary the OCR saw, or joined pieces the note alignment will handle)
+    out: List[str] = []
+    i = 0
+    n = len(read)
+    while i < n:
+        if spans[i] is None:
+            out.append(read[i])
+            i += 1
+            continue
+        lo, hi = spans[i]
+        j = i + 1
+        group_ocr = {q for q, (s0, s1) in enumerate(ocr_spans) if s0 < hi and lo < s1}
+        while True:
+            if group_ocr:
+                lo = min(lo, min(ocr_spans[q][0] for q in group_ocr))
+                hi = max(hi, max(ocr_spans[q][1] for q in group_ocr))
+            if j < n and spans[j] is not None and spans[j][0] < hi:
+                hi = max(hi, spans[j][1])
+                group_ocr |= {q for q, (s0, s1) in enumerate(ocr_spans) if s0 < hi and lo < s1}
+                j += 1
+                continue
+            break
+        if len(group_ocr) <= 1:
+            out.extend(read[i:j])
+        else:
+            out.extend(ocr[q] for q in sorted(group_ocr))
+        i = j
+    return out
+
+
+def _close_text(a: str, b: str) -> bool:
+    """Two readings of a whole line agree on most of their letters."""
+    import difflib
+    if not a or not b:
+        return False
+    return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio() >= 0.6
 
 
 def _close(a: str, b: str) -> bool:

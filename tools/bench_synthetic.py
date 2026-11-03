@@ -176,6 +176,11 @@ def structure_score(pred_path, gt_path) -> str:
     return f"{hit}/{len(g)}" + (f" +{extra}" if extra else "")
 
 
+def _mean(xs) -> str:
+    xs = [x for x in xs if x is not None]
+    return f"{sum(xs) / len(xs):.3f}" if xs else "-"
+
+
 def _sum_frac(xs) -> str:
     hit = tot = extra = 0
     for x in xs:
@@ -191,6 +196,7 @@ def compare(pred_path, gt_path, choir=False):
         gt = _sung_only(gt, len(pred.parts))
     res = {"parts": f"{len(pred.parts)}/{len(gt.parts)}"}
     notes, lyrics, per_part, octave_parts, onsets = [], [], [], [], []
+    lyr_weighted = []
     for i, gp in enumerate(gt.parts):
         if i >= len(pred.parts):
             notes.append(0.0)
@@ -217,6 +223,7 @@ def compare(pred_path, gt_path, choir=False):
         lp = [_clean(x) for t in pt for x in t[2] if x and any(c.isalpha() for c in x)]
         if lg:
             lyrics.append(ratio(lp, lg))
+            lyr_weighted.append((ratio(lp, lg), len(lg)))
         per_part.append((gp.partName or f"P{i + 1}", round(notes[-1], 3), round(ratio(lp, lg), 3) if lg else None))
     res["notes"] = round(min(notes), 3)
     # Same notes however split into chords and voices (worst part)
@@ -248,6 +255,10 @@ def compare(pred_path, gt_path, choir=False):
     tp_ = best
     res["ties"] = f"{len(tg_ & tp_)}/{len(tg_)}" + (f" +{len(tp_ - tg_)}" if tp_ - tg_ else "")
     res["lyrics"] = round(min(lyrics), 3) if lyrics else None
+    # All parts together, by syllable count (a part with a few stray words
+    # weighs as little as it has)
+    tot = sum(n for _, n in lyr_weighted)
+    res["lyrics_all"] = round(sum(r * n for r, n in lyr_weighted) / tot, 3) if tot else None
     res["repeats"] = structure_score(pred_path, gt_path)
     if octave_parts:
         res["octave_off_in_reference"] = octave_parts
@@ -298,7 +309,8 @@ def main():
               f" | perfect notes {sum(r['notes'] == 1 for r in ok)}"
               f" | time ok {sum(r['time'] == 'ok' for r in ok)}"
               f" | valid {sum(bool(r['valid']) for r in ok)}"
-              f" | repeats {_sum_frac([r.get('repeats', '0/0') for r in ok])}")
+              f" | repeats {_sum_frac([r.get('repeats', '0/0') for r in ok])}"
+              f" | lyrics all {_mean([r.get('lyrics_all') for r in ok])}")
 
 
 if __name__ == "__main__":
