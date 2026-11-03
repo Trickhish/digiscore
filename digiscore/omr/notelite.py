@@ -38,6 +38,11 @@ def find_notelite_binary() -> Optional[str]:
     return None
 
 
+def _is_notelite_build(binary: str) -> bool:
+    """True for NoteLite itself, False for the open-source Audiveris build."""
+    return "audiveris" not in os.path.basename(os.path.realpath(binary)).lower()
+
+
 def is_notelite_available() -> bool:
     """Checks if NoteLite is installed and available."""
     return find_notelite_binary() is not None
@@ -286,6 +291,9 @@ def run_notelite_omr(
                 # indent only their first system (and incipits), so keep one score
                 "-constant", "com.notelite.omr.sheet.ProcessingSwitches.indentations=false",
             ]
+        if not _is_notelite_build(notelite_bin):
+            # The open-source Audiveris build names its constants org.audiveris
+            cmd = [c.replace("com.notelite.", "org.audiveris.") for c in cmd]
         if sheets:
             cmd.extend(["-sheets", str(sheets)])
         if is_project:

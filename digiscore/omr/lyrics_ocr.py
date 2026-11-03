@@ -383,7 +383,19 @@ def _find_missing_lyric_lines(img: Image.Image, staff: StaffInSystem, offsets) -
     if x1 - x0 < 4 * il:
         return []
     lines = []
+    # Low notes hang below the staff: the words start under the ink joined to it
+    # (a gap of clear paper separates the two)
+    rows = (np.asarray(img.crop((x0, int(staff.bottom), x1, min(img.height, int(staff.bottom + 8 * il)))).convert("L")) < 128).mean(axis=1)
+    gap = max(2, int(0.25 * il))
+    end = 0
+    for i, v in enumerate(rows):
+        if v > 0.004:
+            end = i
+        elif i - end > gap:
+            break
+    push = end / il if end > 0.6 * il else 0.0
     for k, (t, b) in enumerate(offsets):
+        t, b = t + push, b + push
         y0 = int(staff.bottom + t * il)
         y1 = int(staff.bottom + b * il)
         if y1 <= y0 or y1 >= img.height:
