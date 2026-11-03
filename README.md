@@ -81,7 +81,7 @@ clean 130 DPI scans of these scores, less where the OMR itself struggles).
 
 ### Engine Selection & Options
 - `--engine {auto,vector,notelite}`: Choose specific engine or let digiScore auto-detect (default: `auto`).
-- `--no-ai`: Disable AI metadata extraction and lyrics verification.
+- `--no-ai`: Disable AI metadata extraction and lyric reading (see below).
 - `--sheets SHEETS`: Specify sheet numbers/ranges for OMR (e.g. `1` or `1-3`).
 - `--choir`: Choir mode, sung parts only (see above).
 - `--split-voices`: One part per voice for staves shared by two voices.
@@ -128,16 +128,31 @@ python tools/bench_synthetic.py --dir examples/cpdl --choir  # the same in choir
 python tools/bench_synthetic.py --dir examples/musetrainer   # piano scores
 ```
 
-Current results (mean share of notes right per score, worst part):
+Current results (mean share of notes right per score, worst part; repeats =
+repeat signs and volta endings found / expected, matched by position):
 
-| Set | Scores | Notes | Lyrics |
-|---|---|---|---|
-| `examples/synthetic` (vector) | 20 | 1.000 (20 perfect) | 1.000 |
-| `examples/source_and_pdf` | 3 | 1.000 | 1.000 |
-| `examples/cpdl` | 41 (40 readable) | 0.920 (10 perfect) | 0.904 |
-| `examples/cpdl --choir` | 41 (40 readable) | 0.929 (11 perfect) | 0.904 |
-| `examples/musetrainer` | 12 | 0.954 (7 perfect) | – |
-| `examples/synthetic --scan 130` (NoteLite) | 20 | 0.954 | – |
+| Set | Scores | Notes | Lyrics | Repeats |
+|---|---|---|---|---|
+| `examples/synthetic` (vector) | 20 | 1.000 (20 perfect) | 1.000 | 12/12 |
+| `examples/source_and_pdf` | 3 | 1.000 | 1.000 | – |
+| `examples/cpdl` | 41 | 0.899 (10 perfect) | 0.904 | 26/42 |
+| `examples/cpdl --choir` | 41 | 0.908 (11 perfect) | 0.904 | 26/42 |
+| `examples/musetrainer` | 12 | 0.954 (7 perfect) | – | 17/17 |
+| `examples/synthetic --scan 130` (NoteLite, with AI) | 20 | 0.954 | 0.895 (`lyrics_all`) | 12/12 |
+| 8 CPDL choir scores as 130 DPI scans (with AI) | 8 | 0.768 | 0.753 (`lyrics_all`) | 3/6 |
+
+Several CPDL references add repeat signs that are not printed on the page, so
+the repeats score undercounts. `lyrics_all` weighs all parts by syllable count.
+
+### AI lyric reading (scans)
+
+On by default; `--no-ai` / `use_ai=False` turns it off. Needs
+`DURY_AI_API_KEY` in the environment or a `.env` file. For every lyric line the
+OCR reads, a vision model re-reads the line image with the OCR guess: it splits
+syllables the OCR ran together and fixes letters and accents, while the OCR's
+own syllable boundaries are kept. The result is placed on the OCR's positions
+and aligned to the notes. Without the key the OCR reading is used as is
+(lyrics 0.72 vs 0.76 on the CPDL scans, 0.82 vs 0.89 on the synthetic scans).
 
 Vector PDFs from MuseScore 2–4, Sibelius, Finale, LilyPond, capella, Mozart
 and several printer drivers (renamed or Type3 music fonts) are read.
