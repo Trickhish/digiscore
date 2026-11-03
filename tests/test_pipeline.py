@@ -66,6 +66,7 @@ def test_mxl_packaging_and_reading():
         assert "<work-title>Test</work-title>" in read_back
 
 
+@pytest.mark.skipif(not is_notelite_available(), reason="NoteLite not installed")
 def test_notelite_omr_available():
     assert is_notelite_available() is True
 
