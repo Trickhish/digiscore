@@ -15,6 +15,7 @@ from typing import List, Optional
 
 DEFAULT_NOTELITE_PATHS = [
     os.environ.get("NOTELITE_BIN"),
+    str(Path(__file__).resolve().parents[2] / "vendor" / "audiveris" / "bin" / "NoteLite"),
     "/tmp/opencode/tools/app-5.13.0/bin/NoteLite",
     "/opt/notelite/bin/NoteLite",
     "/usr/local/bin/NoteLite",

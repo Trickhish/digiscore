@@ -23,7 +23,7 @@ pip install -e .
 ### NoteLite OMR Setup (for Scanned Scores)
 
 digiScore automatically detects and uses NoteLite / Audiveris when available:
-- Place NoteLite in `/tmp/opencode/tools/app-5.13.0/bin/NoteLite` or export `NOTELITE_BIN=/path/to/NoteLite`.
+- Place NoteLite or Audiveris in `vendor/audiveris/bin/NoteLite` (git-ignored; the open-source Audiveris 5.11 `.deb` unpacked there works) or export `NOTELITE_BIN=/path/to/NoteLite`.
 - Tesseract legacy OCR models can be configured via `TESSDATA_PREFIX=/opt/tessdata`.
 
 ## CLI Usage

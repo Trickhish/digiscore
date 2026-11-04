@@ -10,3 +10,4 @@ build/
 out/
 tmp/
 *.omr
+vendor/
